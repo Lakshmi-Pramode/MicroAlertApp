@@ -1,0 +1,32 @@
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import AdminLoginScreen from '../screens/AdminLoginScreen';
+import HomeScreen from '../screens/HomeScreen';
+import ResourcesScreen from '../screens/ResourcesScreen';
+import AdminDashboard from '../screens/AdminDashboard';
+
+const Stack = createStackNavigator();
+
+export default function AppNavigator() {
+    return (
+        <NavigationContainer>
+            <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+                {/* Auth Screens */}
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="Register" component={RegisterScreen} />
+                <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+                
+                {/* User Screens */}
+                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="Resources" component={ResourcesScreen} />
+                
+                {/* Admin Screens */}
+                <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+            </Stack.Navigator>
+        </NavigationContainer>
+    );
+}
