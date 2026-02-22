@@ -8,6 +8,8 @@ import AdminLoginScreen from '../screens/AdminLoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ResourcesScreen from '../screens/ResourcesScreen';
 import AdminDashboard from '../screens/AdminDashboard';
+import ReportScreen from '../screens/ReportScreen';
+import AlertScreen from '../screens/AlertScreen';
 
 const Stack = createStackNavigator();
 
@@ -26,6 +28,8 @@ export default function AppNavigator() {
                 
                 {/* Admin Screens */}
                 <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+                <Stack.Screen name="Report" component={ReportScreen} />
+                <Stack.Screen name="Alerts" component={AlertScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

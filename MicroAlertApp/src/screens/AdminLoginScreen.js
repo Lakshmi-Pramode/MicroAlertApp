@@ -12,7 +12,7 @@ export default function AdminLoginScreen({ navigation }) {
             const res = await API.post('/admin/login', { adminId, password });
             await AsyncStorage.setItem('token', res.data.token);
             // Replace with AdminDashboard if created, otherwise Home
-            navigation.replace('Home'); 
+            navigation.replace('AdminDashboard'); 
             Alert.alert("Admin Access", "Authenticated successfully");
         } catch (err) {
             Alert.alert("Access Denied", "Invalid Admin Credentials");
