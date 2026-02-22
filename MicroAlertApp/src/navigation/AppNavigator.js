@@ -16,20 +16,22 @@ const Stack = createStackNavigator();
 export default function AppNavigator() {
     return (
         <NavigationContainer>
-            <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
-                {/* Auth Screens */}
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                
+                {/* Auth */}
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Register" component={RegisterScreen} />
                 <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
-                
-                {/* User Screens */}
+
+                {/* User */}
                 <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen name="Resources" component={ResourcesScreen} />
-                
-                {/* Admin Screens */}
-                <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
                 <Stack.Screen name="Report" component={ReportScreen} />
                 <Stack.Screen name="Alerts" component={AlertScreen} />
+                <Stack.Screen name="Resources" component={ResourcesScreen} />
+
+                {/* Admin */}
+                <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+
             </Stack.Navigator>
         </NavigationContainer>
     );
