@@ -5,29 +5,93 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  ScrollView
+  ScrollView,
+  Image
 } from 'react-native';
+import { launchCamera } from 'react-native-image-picker';
+import Geolocation from '@react-native-community/geolocation';
 import API from '../api/apiService';
 
 export default function ReportScreen({ navigation }) {
 
   const [selectedType, setSelectedType] = useState('');
+  const [image, setImage] = useState(null);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
 
   const disasterTypes = ['Flood', 'Landslide', 'Fire', 'Other'];
 
+  // 📸 Capture Photo
+  const capturePhoto = () => {
+    launchCamera({ mediaType: 'photo', quality: 0.8 }, response => {
+      if (response.didCancel) return;
+      if (response.assets) {
+        setImage(response.assets[0].uri);
+        Alert.alert("Photo Captured");
+      }
+    });
+  };
+
+  // 🎥 Capture Video
+  const captureVideo = () => {
+    launchCamera({ mediaType: 'video' }, response => {
+      if (response.didCancel) return;
+      if (response.assets) {
+        setImage(response.assets[0].uri);
+        Alert.alert("Video Recorded");
+      }
+    });
+  };
+
+  // 📍 Get Live Location
+  const getLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        setLatitude(position.coords.latitude);
+        setLongitude(position.coords.longitude);
+        Alert.alert("Location Captured");
+      },
+      error => Alert.alert("Location Error", error.message),
+      { enableHighAccuracy: true }
+    );
+  };
+
+  // 📤 Submit Report
   const submitReport = async () => {
+
     if (!selectedType) {
-      Alert.alert("Select Disaster Type", "Please choose a disaster type.");
+      Alert.alert("Select Disaster Type");
       return;
     }
 
+    if (!image) {
+      Alert.alert("Capture photo or video");
+      return;
+    }
+
+    if (!latitude) {
+      Alert.alert("Location not detected");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append('disasterType', selectedType);
+    formData.append('latitude', latitude.toString());
+    formData.append('longitude', longitude.toString());
+
+    formData.append('image', {
+      uri: image,
+      type: image.includes('.mp4') ? 'video/mp4' : 'image/jpeg',
+      name: image.includes('.mp4') ? 'video.mp4' : 'photo.jpg'
+    });
+
     try {
-      await API.post('/reports', {
-        type: selectedType,
-        description: `${selectedType} reported`
+      await API.post('/reports', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      Alert.alert("Submitted", "Report sent for AI verification");
+      Alert.alert("Submitted", "Report sent to Admin for verification");
       navigation.goBack();
 
     } catch (err) {
@@ -76,13 +140,13 @@ export default function ReportScreen({ navigation }) {
         {/* Media Section */}
         <View style={styles.mediaRow}>
 
-          <TouchableOpacity style={styles.mediaCard}>
+          <TouchableOpacity style={styles.mediaCard} onPress={capturePhoto}>
             <Text style={styles.mediaIcon}>📷</Text>
             <Text style={styles.mediaTitle}>Capture Live Photo</Text>
             <Text style={styles.mediaSub}>AI Risk Check</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.mediaCard}>
+          <TouchableOpacity style={styles.mediaCard} onPress={captureVideo}>
             <Text style={styles.mediaIcon}>🎥</Text>
             <Text style={styles.mediaTitle}>Record Live Video</Text>
             <Text style={styles.mediaSub}>Motion Analysis</Text>
@@ -90,18 +154,26 @@ export default function ReportScreen({ navigation }) {
 
         </View>
 
+        {/* Preview */}
+        {image && (
+          <Image
+            source={{ uri: image }}
+            style={{ width: '100%', height: 200, borderRadius: 15, marginBottom: 20 }}
+          />
+        )}
+
         {/* Location Section */}
         <Text style={styles.sectionTitle}>Live Location</Text>
 
-        <View style={styles.locationCard}>
+        <TouchableOpacity style={styles.locationCard} onPress={getLocation}>
           <Text style={styles.locationIcon}>📍</Text>
           <View>
             <Text style={styles.autoDetected}>AUTO-DETECTED</Text>
             <Text style={styles.locationText}>
-              Maple Avenue, Sector 4
+              {latitude ? `${latitude}, ${longitude}` : "Tap to Detect Location"}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
       </ScrollView>
 
@@ -242,7 +314,7 @@ const styles = StyleSheet.create({
     bottom: 30,
     left: 20,
     right: 20,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#1E3A8A',
     padding: 18,
     borderRadius: 20,
     alignItems: 'center'
