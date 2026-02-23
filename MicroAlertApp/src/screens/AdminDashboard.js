@@ -12,8 +12,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API from '../api/apiService';
 
-const BASE_URL = "http://10.0.2.2:5000"; // for Android Emulator
-// If using real device → replace with your PC IP like: http://192.168.1.5:5000
+// 🔥 IMPORTANT: Replace with YOUR LAPTOP IPv4
+const BASE_URL = "http://192.168.1.5:5000";
 
 export default function AdminDashboard({ navigation }) {
 
@@ -23,7 +23,7 @@ export default function AdminDashboard({ navigation }) {
   // ================= FETCH REPORTS =================
   const fetchReports = async () => {
     try {
-      const res = await API.get('/reports/admin/all');
+      const res = await API.get('/reports');
       setReports(res.data);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch reports");
@@ -112,12 +112,20 @@ export default function AdminDashboard({ navigation }) {
                   </View>
                 </View>
 
-                {/* Image */}
+                {/* 🔥 MEDIA DISPLAY (Image or Video) */}
                 {report.mediaUrl && (
-                  <Image
-                    source={{ uri: `${BASE_URL}/uploads/${report.mediaUrl}` }}
-                    style={styles.image}
-                  />
+                  <>
+                    {report.mediaUrl.endsWith('.mp4') ? (
+                      <Text style={{ color: '#1E3A8A', marginBottom: 10 }}>
+                        🎥 Video uploaded (Preview not supported here)
+                      </Text>
+                    ) : (
+                      <Image
+                        source={{ uri: `${BASE_URL}/uploads/${report.mediaUrl}` }}
+                        style={styles.image}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* Description */}
@@ -129,11 +137,6 @@ export default function AdminDashboard({ navigation }) {
                 <Text style={styles.locationText}>
                   📍 Lat: {report.latitude || "N/A"} | 
                   Long: {report.longitude || "N/A"}
-                </Text>
-
-                {/* User */}
-                <Text style={styles.detailText}>
-                  Reported by: {report.user?.fullName || "Unknown"}
                 </Text>
 
                 {/* Action Buttons */}

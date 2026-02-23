@@ -15,7 +15,8 @@ import API from '../api/apiService';
 export default function ReportScreen({ navigation }) {
 
   const [selectedType, setSelectedType] = useState('');
-  const [image, setImage] = useState(null);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaType, setMediaType] = useState(null);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
 
@@ -23,24 +24,38 @@ export default function ReportScreen({ navigation }) {
 
   // 📸 Capture Photo
   const capturePhoto = () => {
-    launchCamera({ mediaType: 'photo', quality: 0.8 }, response => {
-      if (response.didCancel) return;
-      if (response.assets) {
-        setImage(response.assets[0].uri);
-        Alert.alert("Photo Captured");
+    launchCamera(
+      { mediaType: 'photo', quality: 0.8, saveToPhotos: true },
+      response => {
+        if (response.didCancel) return;
+
+        if (response.assets && response.assets.length > 0) {
+          const file = response.assets[0];
+
+          setMediaFile(file);
+          setMediaType('photo');
+          Alert.alert("Photo Captured");
+        }
       }
-    });
+    );
   };
 
   // 🎥 Capture Video
   const captureVideo = () => {
-    launchCamera({ mediaType: 'video' }, response => {
-      if (response.didCancel) return;
-      if (response.assets) {
-        setImage(response.assets[0].uri);
-        Alert.alert("Video Recorded");
+    launchCamera(
+      { mediaType: 'video', videoQuality: 'high' },
+      response => {
+        if (response.didCancel) return;
+
+        if (response.assets && response.assets.length > 0) {
+          const file = response.assets[0];
+
+          setMediaFile(file);
+          setMediaType('video');
+          Alert.alert("Video Recorded");
+        }
       }
-    });
+    );
   };
 
   // 📍 Get Live Location
@@ -60,17 +75,17 @@ export default function ReportScreen({ navigation }) {
   const submitReport = async () => {
 
     if (!selectedType) {
-      Alert.alert("Select Disaster Type");
+      Alert.alert("Please select disaster type");
       return;
     }
 
-    if (!image) {
-      Alert.alert("Capture photo or video");
+    if (!mediaFile) {
+      Alert.alert("Please capture photo or video");
       return;
     }
 
-    if (!latitude) {
-      Alert.alert("Location not detected");
+    if (!latitude || !longitude) {
+      Alert.alert("Please detect location");
       return;
     }
 
@@ -80,21 +95,30 @@ export default function ReportScreen({ navigation }) {
     formData.append('latitude', latitude.toString());
     formData.append('longitude', longitude.toString());
 
-    formData.append('image', {
-      uri: image,
-      type: image.includes('.mp4') ? 'video/mp4' : 'image/jpeg',
-      name: image.includes('.mp4') ? 'video.mp4' : 'photo.jpg'
+    formData.append('media', {
+      uri: mediaFile.uri,
+      type: mediaFile.type,
+      name: mediaFile.fileName || (mediaType === 'video' ? 'video.mp4' : 'photo.jpg')
     });
 
     try {
+
       await API.post('/reports', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      Alert.alert("Submitted", "Report sent to Admin for verification");
+      Alert.alert("Success", "Report submitted for admin verification");
+
+      // Reset
+      setSelectedType('');
+      setMediaFile(null);
+      setLatitude(null);
+      setLongitude(null);
+
       navigation.goBack();
 
     } catch (err) {
+      console.log(err);
       Alert.alert("Error", "Failed to submit report");
     }
   };
@@ -143,23 +167,29 @@ export default function ReportScreen({ navigation }) {
           <TouchableOpacity style={styles.mediaCard} onPress={capturePhoto}>
             <Text style={styles.mediaIcon}>📷</Text>
             <Text style={styles.mediaTitle}>Capture Live Photo</Text>
-            <Text style={styles.mediaSub}>AI Risk Check</Text>
+            <Text style={styles.mediaSub}>Real-time Evidence</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.mediaCard} onPress={captureVideo}>
             <Text style={styles.mediaIcon}>🎥</Text>
             <Text style={styles.mediaTitle}>Record Live Video</Text>
-            <Text style={styles.mediaSub}>Motion Analysis</Text>
+            <Text style={styles.mediaSub}>Motion Evidence</Text>
           </TouchableOpacity>
 
         </View>
 
         {/* Preview */}
-        {image && (
+        {mediaFile && mediaType === 'photo' && (
           <Image
-            source={{ uri: image }}
-            style={{ width: '100%', height: 200, borderRadius: 15, marginBottom: 20 }}
+            source={{ uri: mediaFile.uri }}
+            style={styles.preview}
           />
+        )}
+
+        {mediaFile && mediaType === 'video' && (
+          <Text style={{ marginBottom: 20, color: '#111827' }}>
+            🎥 Video Ready to Upload
+          </Text>
         )}
 
         {/* Location Section */}
@@ -170,7 +200,9 @@ export default function ReportScreen({ navigation }) {
           <View>
             <Text style={styles.autoDetected}>AUTO-DETECTED</Text>
             <Text style={styles.locationText}>
-              {latitude ? `${latitude}, ${longitude}` : "Tap to Detect Location"}
+              {latitude
+                ? `${latitude}, ${longitude}`
+                : "Tap to Detect Location"}
             </Text>
           </View>
         </TouchableOpacity>
@@ -179,7 +211,7 @@ export default function ReportScreen({ navigation }) {
 
       {/* Submit Button */}
       <TouchableOpacity style={styles.submitBtn} onPress={submitReport}>
-        <Text style={styles.submitText}>Submit for AI Verification</Text>
+        <Text style={styles.submitText}>Submit Report</Text>
       </TouchableOpacity>
 
     </View>
@@ -275,12 +307,20 @@ const styles = StyleSheet.create({
   mediaTitle: {
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 5
+    marginBottom: 5,
+    color: '#111827'
   },
 
   mediaSub: {
     fontSize: 12,
     color: '#6B7280'
+  },
+
+  preview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 15,
+    marginBottom: 20
   },
 
   locationCard: {
