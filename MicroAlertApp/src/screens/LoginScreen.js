@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, padding: 30, backgroundColor: '#fff', justifyContent: 'center' },
     header: { fontSize: 32, fontWeight: 'bold', color: '#002B5B' },
     sub: { color: '#666', marginBottom: 40 },
-    input: { borderBottomWidth: 1, borderColor: '#ccc', marginBottom: 20, padding: 10 },
+    input: { borderBottomWidth: 1, borderColor: '#ccc', marginBottom: 20, padding: 10, color: '#000' },
     btn: { backgroundColor: '#D32F2F', padding: 15, borderRadius: 10, alignItems: 'center' },
     btnText: { color: '#fff', fontWeight: 'bold' },
     adminLink: { textAlign: 'center', marginTop: 20, color: '#002B5B' },

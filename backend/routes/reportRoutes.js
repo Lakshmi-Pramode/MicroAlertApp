@@ -4,12 +4,16 @@ const multer = require('multer');
 const path = require('path');
 const Report = require('../models/Report');
 const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
+const fs = require('fs');
 
+// Ensure uploads folder exists
+const uploadDir = 'uploads';
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
-// ================= MULTER CONFIG =================
+// Multer Config
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/');
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         const uniqueName = Date.now() + path.extname(file.originalname);
@@ -19,89 +23,68 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// CREATE REPORT (USER)
+router.post('/', verifyToken, upload.single('image'), async (req, res) => {
+    try {
+        const report = new Report({
+            disasterType: req.body.disasterType,
+            description: `${req.body.disasterType} reported`,
+            mediaUrl: req.file ? req.file.filename : null,
+            latitude: req.body.latitude,
+            longitude: req.body.longitude,
+            user: req.user.id,
+            status: 'pending'
+        });
 
-// ================= USER: CREATE REPORT =================
-router.post(
-    '/',
-    verifyToken,
-    upload.single('image'),
-    async (req, res) => {
-        try {
+        await report.save();
+        res.status(201).json({ message: "Report submitted successfully", report });
 
-            const report = new Report({
-                disasterType: req.body.disasterType,
-                description: `${req.body.disasterType} reported`,
-                mediaUrl: req.file ? req.file.filename : null,
-                latitude: req.body.latitude,
-                longitude: req.body.longitude,
-                user: req.user.id,
-                status: 'pending'
-            });
-
-            await report.save();
-
-            res.status(201).json({
-                message: "Report submitted successfully",
-                report
-            });
-
-        } catch (err) {
-            res.status(500).json({ error: err.message });
-        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: err.message });
     }
-);
+});
 
-
-// ================= USER: GET APPROVED REPORTS =================
+// GET APPROVED REPORTS (USER)
 router.get('/', verifyToken, async (req, res) => {
     try {
-
         const reports = await Report.find({ status: 'approved' })
             .populate('user', 'fullName')
             .sort({ createdAt: -1 });
-
         res.json(reports);
-
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-
-// ================= ADMIN: GET ALL REPORTS =================
+// ADMIN: GET ALL REPORTS
 router.get('/admin/all', verifyToken, verifyAdmin, async (req, res) => {
     try {
-
         const reports = await Report.find()
             .populate('user', 'fullName')
             .sort({ createdAt: -1 });
-
         res.json(reports);
-
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-
-// ================= ADMIN: APPROVE / REJECT =================
+// ADMIN: APPROVE/REJECT
 router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
     try {
-
         const { status } = req.body;
-
         const updated = await Report.findByIdAndUpdate(
             req.params.id,
             { status },
             { new: true }
         );
-
         res.json(updated);
-
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Serve uploaded media
+router.use('/uploads', express.static(uploadDir));
 
 module.exports = router;

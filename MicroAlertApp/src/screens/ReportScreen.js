@@ -24,7 +24,6 @@ export default function ReportScreen({ navigation }) {
 
   const disasterTypes = ['Flood', 'Landslide', 'Fire', 'Other'];
 
-  // ✅ Request runtime camera permission for Android
   const requestCameraPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
@@ -40,7 +39,7 @@ export default function ReportScreen({ navigation }) {
     return true;
   };
 
-  // 📸 Capture Photo
+  // Capture Photo
   const capturePhoto = async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
@@ -66,7 +65,7 @@ export default function ReportScreen({ navigation }) {
     );
   };
 
-  // 🎥 Capture Video
+  // Capture Video
   const captureVideo = async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
@@ -92,7 +91,7 @@ export default function ReportScreen({ navigation }) {
     );
   };
 
-  // 📍 Get Live Location
+  // Get Live Location
   const getLocation = () => {
     Geolocation.getCurrentPosition(
       position => {
@@ -105,7 +104,7 @@ export default function ReportScreen({ navigation }) {
     );
   };
 
-  // 📤 Submit Report
+  // Submit Report
   const submitReport = async () => {
     if (!selectedType) {
       Alert.alert("Please select disaster type");
@@ -126,7 +125,9 @@ export default function ReportScreen({ navigation }) {
     formData.append('disasterType', selectedType);
     formData.append('latitude', latitude.toString());
     formData.append('longitude', longitude.toString());
-    formData.append('media', {
+
+    // ⚡ Important: field name must match backend multer
+    formData.append('image', {
       uri: mediaFile.uri,
       type: mediaFile.type,
       name: mediaFile.fileName || (mediaType === 'video' ? 'video.mp4' : 'photo.jpg')
@@ -139,7 +140,7 @@ export default function ReportScreen({ navigation }) {
 
       Alert.alert("Success", "Report submitted successfully");
 
-      // Reset
+      // Reset form
       setSelectedType('');
       setMediaFile(null);
       setMediaType(null);
@@ -149,7 +150,7 @@ export default function ReportScreen({ navigation }) {
       navigation.goBack();
 
     } catch (err) {
-      console.log(err);
+      console.log(err.response || err.message);
       Alert.alert("Error", "Failed to submit report");
     }
   };
@@ -158,7 +159,6 @@ export default function ReportScreen({ navigation }) {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={styles.back}>←</Text>
@@ -167,7 +167,6 @@ export default function ReportScreen({ navigation }) {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Disaster Type */}
         <Text style={styles.sectionTitle}>Disaster Type</Text>
         <View style={styles.typeGrid}>
           {disasterTypes.map(type => (
@@ -183,7 +182,6 @@ export default function ReportScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Media */}
         <View style={styles.mediaRow}>
           <TouchableOpacity style={styles.mediaCard} onPress={capturePhoto}>
             <Text style={styles.mediaIcon}>📷</Text>
@@ -198,7 +196,6 @@ export default function ReportScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Preview */}
         {mediaFile && mediaType === 'photo' && (
           <Image source={{ uri: mediaFile.uri }} style={styles.preview} />
         )}
@@ -206,7 +203,6 @@ export default function ReportScreen({ navigation }) {
           <Text style={{ marginBottom: 20, color: '#111827' }}>🎥 Video Ready to Upload</Text>
         )}
 
-        {/* Location */}
         <Text style={styles.sectionTitle}>Live Location</Text>
         <TouchableOpacity style={styles.locationCard} onPress={getLocation}>
           <Text style={styles.locationIcon}>📍</Text>
@@ -220,7 +216,6 @@ export default function ReportScreen({ navigation }) {
 
       </ScrollView>
 
-      {/* Submit Button */}
       <TouchableOpacity style={styles.submitBtn} onPress={submitReport}>
         <Text style={styles.submitText}>Submit Report</Text>
       </TouchableOpacity>

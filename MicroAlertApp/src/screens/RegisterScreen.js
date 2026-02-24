@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     title: { fontSize: 32, fontWeight: 'bold', color: '#002B5B' },
     sub: { color: '#666', marginBottom: 30 },
     label: { fontWeight: 'bold', marginBottom: 5, color: '#333' },
-    input: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 10, marginBottom: 20, backgroundColor: '#FAFAFA' },
+    input: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 10, marginBottom: 20, backgroundColor: '#eee',color: '#000' },
     pickerSubstitute: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 10, marginBottom: 30, backgroundColor: '#FAFAFA' },
     regBtn: { backgroundColor: '#D32F2F', padding: 18, borderRadius: 12, alignItems: 'center' },
     regBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
