@@ -12,7 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API from '../api/apiService';
 
-// 🔥 IMPORTANT: Replace with YOUR LAPTOP IPv4
+// Replace with your laptop IPv4
 const BASE_URL = "http://192.168.1.5:5000";
 
 export default function AdminDashboard({ navigation }) {
@@ -23,9 +23,12 @@ export default function AdminDashboard({ navigation }) {
   // ================= FETCH REPORTS =================
   const fetchReports = async () => {
     try {
-      const res = await API.get('/reports');
+
+      const res = await API.get('/reports/admin/all');
       setReports(res.data);
+
     } catch (error) {
+      console.log(error);
       Alert.alert("Error", "Failed to fetch reports");
     } finally {
       setLoading(false);
@@ -38,64 +41,90 @@ export default function AdminDashboard({ navigation }) {
 
   // ================= UPDATE STATUS =================
   const updateStatus = async (id, status) => {
+
     try {
+
       await API.put(`/reports/${id}`, { status });
+
+      Alert.alert("Success", `Report ${status}`);
+
       fetchReports();
+
     } catch (error) {
+
       Alert.alert("Error", "Failed to update report");
+
     }
   };
 
   // ================= LOGOUT =================
   const handleLogout = async () => {
+
     await AsyncStorage.clear();
+
     navigation.replace('Login');
+
   };
 
   const activeAlerts = reports.filter(r => r.status === 'approved').length;
   const totalReports = reports.length;
 
   return (
+
     <View style={styles.container}>
 
       {/* Header */}
       <View style={styles.header}>
+
         <View>
           <Text style={styles.welcomeText}>Welcome Admin</Text>
           <Text style={styles.title}>Dashboard</Text>
         </View>
+
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
+
       </View>
 
       {loading ? (
+
         <ActivityIndicator size="large" color="#1E3A8A" />
+
       ) : (
+
         <ScrollView showsVerticalScrollIndicator={false}>
 
           {/* Stats */}
           <View style={styles.statsRow}>
+
             <View style={[styles.statCard, { backgroundColor: '#1E3A8A' }]}>
               <Text style={styles.statNum}>{activeAlerts}</Text>
               <Text style={styles.statLabel}>Active Alerts</Text>
             </View>
+
             <View style={[styles.statCard, { backgroundColor: '#1E40AF' }]}>
               <Text style={styles.statNum}>{totalReports}</Text>
               <Text style={styles.statLabel}>Total Reports</Text>
             </View>
+
           </View>
 
           <Text style={styles.sectionTitle}>Incident Reports</Text>
 
           {reports.length === 0 ? (
+
             <Text>No reports available</Text>
+
           ) : (
+
             reports.map(report => (
+
               <View key={report._id} style={styles.reportCard}>
 
                 {/* Disaster Type + Status */}
                 <View style={styles.reportHeader}>
+
                   <Text style={styles.reportType}>
                     {report.disasterType}
                   </Text>
@@ -110,22 +139,38 @@ export default function AdminDashboard({ navigation }) {
                       {report.status.toUpperCase()}
                     </Text>
                   </View>
+
                 </View>
 
-                {/* 🔥 MEDIA DISPLAY (Image or Video) */}
+                {/* URGENT ALERT */}
+                {report.priority === "urgent" && (
+
+                  <Text style={styles.urgentText}>
+                    🚨 Multiple reports from same location
+                  </Text>
+
+                )}
+
+                {/* MEDIA DISPLAY */}
                 {report.mediaUrl && (
+
                   <>
-                    {report.mediaUrl.endsWith('.mp4') ? (
+                    {report.mediaType === 'video' ? (
+
                       <Text style={{ color: '#1E3A8A', marginBottom: 10 }}>
-                        🎥 Video uploaded (Preview not supported here)
+                        🎥 Video uploaded (Preview not supported)
                       </Text>
+
                     ) : (
+
                       <Image
                         source={{ uri: `${BASE_URL}/uploads/${report.mediaUrl}` }}
                         style={styles.image}
                       />
+
                     )}
                   </>
+
                 )}
 
                 {/* Description */}
@@ -135,13 +180,14 @@ export default function AdminDashboard({ navigation }) {
 
                 {/* Location */}
                 <Text style={styles.locationText}>
-                  📍 Lat: {report.latitude || "N/A"} | 
-                  Long: {report.longitude || "N/A"}
+                  📍 Lat: {report.latitude || "N/A"} | Long: {report.longitude || "N/A"}
                 </Text>
 
                 {/* Action Buttons */}
                 {report.status === 'pending' && (
+
                   <View style={styles.actionRow}>
+
                     <TouchableOpacity
                       style={styles.approveBtn}
                       onPress={() => updateStatus(report._id, 'approved')}
@@ -155,17 +201,25 @@ export default function AdminDashboard({ navigation }) {
                     >
                       <Text style={styles.btnText}>Reject</Text>
                     </TouchableOpacity>
+
                   </View>
+
                 )}
 
               </View>
+
             ))
+
           )}
 
         </ScrollView>
+
       )}
+
     </View>
+
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -256,6 +310,12 @@ const styles = StyleSheet.create({
   reportType: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+
+  urgentText: {
+    color: '#DC2626',
+    fontWeight: 'bold',
+    marginBottom: 10
   },
 
   statusBadge: {

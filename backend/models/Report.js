@@ -13,7 +13,6 @@ const ReportSchema = new mongoose.Schema({
         trim: true
     },
 
-    // Media (Photo or Video)
     mediaUrl: {
         type: String
     },
@@ -23,7 +22,6 @@ const ReportSchema = new mongoose.Schema({
         enum: ['photo', 'video']
     },
 
-    // Geo Location (Better as Number instead of String)
     latitude: {
         type: Number
     },
@@ -32,7 +30,6 @@ const ReportSchema = new mongoose.Schema({
         type: Number
     },
 
-    // GeoJSON format (for future map integration)
     location: {
         type: {
             type: String,
@@ -40,7 +37,7 @@ const ReportSchema = new mongoose.Schema({
             default: 'Point'
         },
         coordinates: {
-            type: [Number]  // [longitude, latitude]
+            type: [Number] // [longitude, latitude]
         }
     },
 
@@ -50,7 +47,13 @@ const ReportSchema = new mongoose.Schema({
         default: 'pending'
     },
 
-    // Admin verification details
+    // ⭐ NEW FIELD (URGENT DETECTION)
+    priority: {
+        type: String,
+        enum: ['normal', 'urgent'],
+        default: 'normal'
+    },
+
     verifiedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -60,18 +63,15 @@ const ReportSchema = new mongoose.Schema({
         type: Date
     },
 
-    // Reported user
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }
 
 }, {
-    timestamps: true   // Automatically adds createdAt & updatedAt
+    timestamps: true
 });
 
-
-// 🔥 Add index for location (for future map search)
 ReportSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Report', ReportSchema);
