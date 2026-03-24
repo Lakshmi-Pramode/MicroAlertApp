@@ -10,9 +10,18 @@ export default function LoginScreen({ navigation }) {
     const handleLogin = async () => {
         try {
             const res = await API.post('/auth/login', { email, password });
+            
+            // 🚨 FIX: Save both the Token and the User's Full Name
+            // This allows the Home screen to greet the user by name.
             await AsyncStorage.setItem('token', res.data.token);
+            
+            if (res.data.user && res.data.user.fullName) {
+                await AsyncStorage.setItem('userName', res.data.user.fullName);
+            }
+
             navigation.replace('Home');
         } catch (err) {
+            console.log("Login Error:", err.response?.data || err.message);
             Alert.alert("Error", "Check your credentials");
         }
     };
@@ -21,16 +30,36 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.container}>
             <Text style={styles.header}>Welcome Back</Text>
             <Text style={styles.sub}>Sign in to stay alerted</Text>
-            <TextInput placeholder="Email Address" style={styles.input} onChangeText={setEmail} />
-            <TextInput placeholder="Password" style={styles.input} secureTextEntry onChangeText={setPassword} />
+            
+            <TextInput 
+                placeholder="Email Address" 
+                placeholderTextColor="#666"
+                style={styles.input} 
+                onChangeText={setEmail} 
+                autoCapitalize="none"
+                keyboardType="email-address"
+            />
+            
+            <TextInput 
+                placeholder="Password" 
+                placeholderTextColor="#666"
+                style={styles.input} 
+                secureTextEntry 
+                onChangeText={setPassword} 
+            />
+            
             <TouchableOpacity style={styles.btn} onPress={handleLogin}>
                 <Text style={styles.btnText}>Login</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity onPress={() => navigation.navigate('AdminLogin')}>
                 <Text style={styles.adminLink}>Admin Login</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.regLink}>Don't have an account? <Text style={{color: 'red'}}>Register Now</Text></Text>
+                <Text style={styles.regLink}>
+                    Don't have an account? <Text style={{color: 'red'}}>Register Now</Text>
+                </Text>
             </TouchableOpacity>
         </View>
     );
@@ -44,5 +73,5 @@ const styles = StyleSheet.create({
     btn: { backgroundColor: '#D32F2F', padding: 15, borderRadius: 10, alignItems: 'center' },
     btnText: { color: '#fff', fontWeight: 'bold' },
     adminLink: { textAlign: 'center', marginTop: 20, color: '#002B5B' },
-    regLink: { textAlign: 'center', marginTop: 40 }
+    regLink: { textAlign: 'center', marginTop: 40, color: '#000' }
 });

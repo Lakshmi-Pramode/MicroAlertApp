@@ -1,7 +1,52 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  SafeAreaView, 
+  Alert 
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
+    const [userName, setUserName] = useState('User');
+
+    // ================= FETCH USER DATA =================
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const name = await AsyncStorage.getItem('userName');
+                if (name) {
+                    setUserName(name);
+                }
+            } catch (error) {
+                console.log("Error loading user name:", error);
+            }
+        };
+        fetchUserData();
+    }, []);
+
+    // ================= LOGOUT LOGIC =================
+    const handleLogout = async () => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to logout?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Logout", 
+                    style: "destructive", 
+                    onPress: async () => {
+                        await AsyncStorage.clear();
+                        navigation.replace('Login');
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -10,17 +55,27 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.greetText}>GOOD MORNING</Text>
-                        <Text style={styles.userName}>Guest</Text>
+                        <Text style={styles.userName}>{userName}</Text>
                     </View>
 
-                    {/* Notification Button */}
-                    <TouchableOpacity 
-                        style={styles.bellBtn}
-                        onPress={() => navigation.navigate('Alerts')}
-                    >
-                        <View style={styles.notifDot} />
-                        <Text style={styles.bellIcon}>🔔</Text>
-                    </TouchableOpacity>
+                    <View style={styles.headerButtons}>
+                        {/* Logout Button */}
+                        <TouchableOpacity 
+                            style={styles.logoutBtn}
+                            onPress={handleLogout}
+                        >
+                            <Text style={styles.logoutIcon}>🚪</Text>
+                        </TouchableOpacity>
+
+                        {/* Notification Button */}
+                        <TouchableOpacity 
+                            style={styles.bellBtn}
+                            onPress={() => navigation.navigate('Alerts')}
+                        >
+                            <View style={styles.notifDot} />
+                            <Text style={styles.bellIcon}>🔔</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Hyperlocal Status Card */}
@@ -122,6 +177,11 @@ const styles = StyleSheet.create({
         marginBottom: 30 
     },
 
+    headerButtons: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+
     greetText: { 
         fontSize: 14, 
         color: '#94A3B8', 
@@ -133,6 +193,18 @@ const styles = StyleSheet.create({
         color: '#1E3A8A', 
         fontWeight: 'bold' 
     },
+
+    logoutBtn: {
+        width: 45, 
+        height: 45, 
+        backgroundColor: '#FEF2F2', 
+        borderRadius: 25, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        marginRight: 10
+    },
+
+    logoutIcon: { fontSize: 18 },
 
     bellBtn: { 
         width: 45, 
@@ -153,6 +225,8 @@ const styles = StyleSheet.create({
         borderRadius: 4, 
         zIndex: 1 
     },
+
+    bellIcon: { fontSize: 20 },
 
     statusCard: { 
         padding: 25, 
