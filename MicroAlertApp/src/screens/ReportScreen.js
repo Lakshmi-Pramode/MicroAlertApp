@@ -60,26 +60,23 @@ export default function ReportScreen({ navigation }) {
   };
 
   // Capture Photo
-  const capturePhoto = async () => {
+ const capturePhoto = async () => {
     const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert("Camera permission denied");
-      return;
-    }
+    if (!hasPermission) return;
 
     launchCamera(
-      { mediaType: 'photo', quality: 0.8, saveToPhotos: true },
+      { 
+        mediaType: 'photo', 
+        quality: 0.4,       // 🚨 Lower quality (0.4 instead of 0.8)
+        maxWidth: 1000,     // 🚨 Limit width
+        maxHeight: 1000,    // 🚨 Limit height
+        saveToPhotos: false 
+      },
       response => {
         if (response.didCancel) return;
-        if (response.errorCode) {
-          Alert.alert("Camera Error", response.errorMessage || "Error opening camera");
-          return;
-        }
         if (response.assets && response.assets.length > 0) {
-          const file = response.assets[0];
-          setMediaFile(file);
+          setMediaFile(response.assets[0]);
           setMediaType('photo');
-          Alert.alert("Photo Captured");
         }
       }
     );
@@ -112,32 +109,44 @@ export default function ReportScreen({ navigation }) {
   };
 
   // Get Live Location
-  const getLocation = () => {
+const getLocation = () => {
     setLoadingLocation(true);
     
+    const options = { 
+      enableHighAccuracy: true, 
+      timeout: 15000, 
+      maximumAge: 10000 
+    };
+
     Geolocation.getCurrentPosition(
       position => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
+        const { latitude: lat, longitude: lon } = position.coords;
         setLatitude(lat);
         setLongitude(lon);
-        
-        fetchAddress(lat, lon).then(() => {
-            setLoadingLocation(false);
-            Alert.alert("Location Updated", "Current address captured successfully.");
-        });
+        fetchAddress(lat, lon).then(() => setLoadingLocation(false));
       },
       error => {
-        setLoadingLocation(false);
-        // 🚨 If it's a timeout, try one more time with lower accuracy
-        Alert.alert("Location Error", "Could not get a precise lock. Try moving near a window or setting your emulator location.");
-        console.log("GPS Error:", error);
+        // 🚨 FALLBACK: If High Accuracy fails, try "Normal" accuracy
+        if (error.code === 3 || error.code === 2) { 
+            Geolocation.getCurrentPosition(
+                position => {
+                    const { latitude: lat, longitude: lon } = position.coords;
+                    setLatitude(lat);
+                    setLongitude(lon);
+                    fetchAddress(lat, lon).then(() => setLoadingLocation(false));
+                },
+                err => {
+                    setLoadingLocation(false);
+                    Alert.alert("Location Error", "Please ensure GPS is on and you are not in a basement.");
+                },
+                { enableHighAccuracy: false, timeout: 15000 }
+            );
+        } else {
+            setLoadingLocation(false);
+            Alert.alert("Location Error", error.message);
+        }
       },
-      { 
-        enableHighAccuracy: true, // 🚨 Uses GPS instead of Network
-        timeout: 15000,           // 🚨 Wait up to 15 seconds for a lock
-        maximumAge: 0             // 🚨 Force a fresh location, don't use cache
-      }
+      options
     );
   };
 
