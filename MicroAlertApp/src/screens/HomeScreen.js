@@ -6,26 +6,43 @@ import {
   TouchableOpacity, 
   ScrollView, 
   SafeAreaView, 
-  Alert 
+  Alert,
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import API from '../api/apiService';
+
+// To display images from your backend correctly
+const SERVER_URL = API.defaults.baseURL.replace('/api', ''); 
 
 export default function HomeScreen({ navigation }) {
     const [userName, setUserName] = useState('User');
+    const [alerts, setAlerts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // ================= FETCH USER DATA =================
+    // ================= FETCH DATA =================
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // 1. Get User Name from local storage
+            const name = await AsyncStorage.getItem('userName');
+            if (name) setUserName(name);
+
+            // 2. Get Approved Alerts from Backend
+            // This calls the GET /reports route which returns only 'approved' ones
+            const res = await API.get('/reports'); 
+            setAlerts(res.data);
+        } catch (error) {
+            console.log("Error fetching home data:", error);
+            // Don't alert here to avoid annoying the user on every refresh
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                const name = await AsyncStorage.getItem('userName');
-                if (name) {
-                    setUserName(name);
-                }
-            } catch (error) {
-                console.log("Error loading user name:", error);
-            }
-        };
-        fetchUserData();
+        fetchData();
     }, []);
 
     // ================= LOGOUT LOGIC =================
@@ -47,9 +64,14 @@ export default function HomeScreen({ navigation }) {
         );
     };
 
+    const activeThreats = alerts.length;
+
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView 
+                showsVerticalScrollIndicator={false} 
+                contentContainerStyle={styles.scrollContent}
+            >
                 
                 {/* Header Section */}
                 <View style={styles.headerRow}>
@@ -78,14 +100,24 @@ export default function HomeScreen({ navigation }) {
                     </View>
                 </View>
 
-                {/* Hyperlocal Status Card */}
-                <View style={styles.statusCard}>
+                {/* Hyperlocal Status Card (DYNAMIC) */}
+                <View style={[
+                    styles.statusCard, 
+                    activeThreats > 0 && { borderColor: '#FECACA', backgroundColor: '#FFF1F1' }
+                ]}>
                     <View style={styles.statusHeader}>
-                        <Text style={styles.statusIcon}>🛡️</Text>
-                        <Text style={styles.statusTitle}>Hyperlocal Status</Text>
+                        <Text style={styles.statusIcon}>{activeThreats > 0 ? "⚠️" : "🛡️"}</Text>
+                        <Text style={[
+                            styles.statusTitle, 
+                            activeThreats > 0 && { color: '#DC2626' }
+                        ]}>
+                            Hyperlocal Status
+                        </Text>
                     </View>
                     <Text style={styles.statusDescription}>
-                        No active threats detected in Maple Avenue.
+                        {activeThreats > 0 
+                            ? `Attention! ${activeThreats} active incidents verified in your surrounding area.` 
+                            : "No active threats detected in your immediate vicinity."}
                     </Text>
                 </View>
 
@@ -105,8 +137,8 @@ export default function HomeScreen({ navigation }) {
                         style={styles.gridBtn}
                         onPress={() => navigation.navigate('Alerts')}
                     >
-                        <Text style={styles.gridIcon}>🔔</Text>
-                        <Text style={styles.gridText}>View Alerts</Text>
+                        <Text style={styles.gridIcon}>📡</Text>
+                        <Text style={styles.gridText}>Live Feed</Text>
                     </TouchableOpacity>
 
                     {/* Resources */}
@@ -120,45 +152,51 @@ export default function HomeScreen({ navigation }) {
 
                 </View>
 
-                {/* Nearby Alerts Section */}
+                {/* Nearby Alerts Section (DYNAMIC) */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Nearby Alerts</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Alerts')}>
-                        <Text style={styles.seeAll}>SEE ALL</Text>
+                    <TouchableOpacity onPress={fetchData}>
+                        <Text style={styles.seeAll}>REFRESH</Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* Alert Card 1 */}
-                <View style={styles.alertCard}>
-                    <View style={styles.alertIconBox}>
-                        <Text style={styles.alertIconText}>⚠️</Text>
+                {loading ? (
+                    <ActivityIndicator size="large" color="#1E3A8A" style={{ marginTop: 20 }} />
+                ) : alerts.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Text style={styles.noData}>No active alerts found.</Text>
                     </View>
-                    <View style={styles.alertInfo}>
-                        <View style={styles.alertHeaderRow}>
-                            <Text style={styles.alertTitle}>Flood</Text>
-                            <View style={styles.criticalBadge}>
-                                <Text style={styles.badgeText}>CRITICAL</Text>
+                ) : (
+                    alerts.map((alert) => (
+                        <TouchableOpacity 
+                            key={alert._id} 
+                            style={styles.alertCard}
+                            onPress={() => navigation.navigate('Alerts')} // Or a Detail screen
+                        >
+                            <View style={[
+                                styles.alertIconBox, 
+                                alert.priority === 'urgent' && { backgroundColor: '#FEF2F2' }
+                            ]}>
+                                <Text style={styles.alertIconText}>
+                                    {alert.disasterType === 'Fire' ? '🔥' : '⚠️'}
+                                </Text>
                             </View>
-                        </View>
-                        <Text style={styles.alertSub}>Maple Avenue • 10 mins ago</Text>
-                    </View>
-                </View>
-
-                {/* Alert Card 2 */}
-                <View style={styles.alertCard}>
-                    <View style={[styles.alertIconBox, {backgroundColor: '#FFFBEB'}]}>
-                        <Text style={styles.alertIconText}>⚠️</Text>
-                    </View>
-                    <View style={styles.alertInfo}>
-                        <View style={styles.alertHeaderRow}>
-                            <Text style={styles.alertTitle}>Landslide</Text>
-                            <View style={styles.riskBadge}>
-                                <Text style={styles.riskText}>AT RISK</Text>
+                            <View style={styles.alertInfo}>
+                                <View style={styles.alertHeaderRow}>
+                                    <Text style={styles.alertTitle}>{alert.disasterType}</Text>
+                                    <View style={alert.priority === 'urgent' ? styles.criticalBadge : styles.riskBadge}>
+                                        <Text style={alert.priority === 'urgent' ? styles.badgeText : styles.riskText}>
+                                            {alert.priority === 'urgent' ? 'CRITICAL' : 'VERIFIED'}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <Text style={styles.alertSub} numberOfLines={1}>
+                                    {alert.address || `Lat: ${alert.latitude}, Long: ${alert.longitude}`}
+                                </Text>
                             </View>
-                        </View>
-                        <Text style={styles.alertSub}>Hillside Road • 30 mins ago</Text>
-                    </View>
-                </View>
+                        </TouchableOpacity>
+                    ))
+                )}
 
             </ScrollView>
         </SafeAreaView>
@@ -252,7 +290,8 @@ const styles = StyleSheet.create({
 
     statusDescription: { 
         color: '#64748B', 
-        fontSize: 16 
+        fontSize: 15,
+        lineHeight: 20
     },
 
     reportBtn: { 
@@ -308,7 +347,18 @@ const styles = StyleSheet.create({
 
     seeAll: { 
         color: '#DC2626', 
-        fontWeight: 'bold' 
+        fontWeight: 'bold',
+        fontSize: 12
+    },
+
+    emptyState: {
+        padding: 20,
+        alignItems: 'center'
+    },
+
+    noData: { 
+        color: '#94A3B8',
+        fontSize: 14
     },
 
     alertCard: { 
@@ -324,7 +374,7 @@ const styles = StyleSheet.create({
     alertIconBox: { 
         width: 50, 
         height: 50, 
-        backgroundColor: '#FEF2F2', 
+        backgroundColor: '#F0F9FF', 
         borderRadius: 12, 
         justifyContent: 'center', 
         alignItems: 'center' 
@@ -363,14 +413,14 @@ const styles = StyleSheet.create({
     },
 
     riskBadge: { 
-        backgroundColor: '#FEF3C7', 
+        backgroundColor: '#D1FAE5', 
         paddingHorizontal: 8, 
         paddingVertical: 2, 
         borderRadius: 10 
     },
 
     riskText: { 
-        color: '#D97706', 
+        color: '#059669', 
         fontSize: 10, 
         fontWeight: 'bold' 
     },

@@ -8,7 +8,8 @@ import {
   ScrollView,
   Image,
   PermissionsAndroid,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
@@ -21,6 +22,8 @@ export default function ReportScreen({ navigation }) {
   const [mediaType, setMediaType] = useState(null);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const [address, setAddress] = useState(''); // 🚨 NEW: State for place name
+  const [loadingLocation, setLoadingLocation] = useState(false); // 🚨 NEW: Loading state
 
   const disasterTypes = ['Flood', 'Landslide', 'Fire', 'Other'];
 
@@ -37,6 +40,23 @@ export default function ReportScreen({ navigation }) {
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
     return true;
+  };
+
+  // 🚨 NEW: Reverse Geocoding Function
+  const fetchAddress = async (lat, lon) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+        { headers: { 'User-Agent': 'MicroAlertApp' } }
+      );
+      const data = await response.json();
+      // display_name gives the full address string
+      const displayAddress = data.display_name || "Location Name Not Found";
+      setAddress(displayAddress);
+    } catch (error) {
+      console.log("Geocoding Error:", error);
+      setAddress("Address lookup failed");
+    }
   };
 
   // Capture Photo
@@ -93,14 +113,31 @@ export default function ReportScreen({ navigation }) {
 
   // Get Live Location
   const getLocation = () => {
+    setLoadingLocation(true);
+    
     Geolocation.getCurrentPosition(
       position => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        Alert.alert("Location Captured");
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lon);
+        
+        fetchAddress(lat, lon).then(() => {
+            setLoadingLocation(false);
+            Alert.alert("Location Updated", "Current address captured successfully.");
+        });
       },
-      error => Alert.alert("Location Error", error.message),
-      { enableHighAccuracy: true }
+      error => {
+        setLoadingLocation(false);
+        // 🚨 If it's a timeout, try one more time with lower accuracy
+        Alert.alert("Location Error", "Could not get a precise lock. Try moving near a window or setting your emulator location.");
+        console.log("GPS Error:", error);
+      },
+      { 
+        enableHighAccuracy: true, // 🚨 Uses GPS instead of Network
+        timeout: 15000,           // 🚨 Wait up to 15 seconds for a lock
+        maximumAge: 0             // 🚨 Force a fresh location, don't use cache
+      }
     );
   };
 
@@ -125,8 +162,9 @@ export default function ReportScreen({ navigation }) {
     formData.append('disasterType', selectedType);
     formData.append('latitude', latitude.toString());
     formData.append('longitude', longitude.toString());
+    formData.append('address', address); // 🚨 NEW: Appending the place name
 
-    // ⚡ FIX: Added bulletproof fallbacks for both 'type' and 'name'
+    // ⚡ Bulletproof FormData attachment
     formData.append('image', {
       uri: mediaFile.uri,
       type: mediaFile.type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
@@ -146,6 +184,7 @@ export default function ReportScreen({ navigation }) {
       setMediaType(null);
       setLatitude(null);
       setLongitude(null);
+      setAddress('');
 
       navigation.goBack();
 
@@ -204,13 +243,30 @@ export default function ReportScreen({ navigation }) {
         )}
 
         <Text style={styles.sectionTitle}>Live Location</Text>
-        <TouchableOpacity style={styles.locationCard} onPress={getLocation}>
+        <TouchableOpacity 
+            style={styles.locationCard} 
+            onPress={getLocation}
+            disabled={loadingLocation}
+        >
           <Text style={styles.locationIcon}>📍</Text>
-          <View>
-            <Text style={styles.autoDetected}>AUTO-DETECTED</Text>
-            <Text style={styles.locationText}>
-              {latitude ? `${latitude}, ${longitude}` : "Tap to Detect Location"}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.autoDetected}>
+                {loadingLocation ? "DETECTING..." : "AUTO-DETECTED"}
             </Text>
+            
+            {loadingLocation ? (
+                <ActivityIndicator size="small" color="#1E3A8A" style={{ alignSelf: 'flex-start', marginTop: 5 }} />
+            ) : (
+                <Text style={styles.locationText} numberOfLines={2}>
+                    {address ? address : (latitude ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : "Tap to Detect Location")}
+                </Text>
+            )}
+
+            {address && latitude && (
+                <Text style={styles.coordsLabel}>
+                    Coordinates: {latitude.toFixed(4)}, {longitude.toFixed(4)}
+                </Text>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -242,8 +298,9 @@ const styles = StyleSheet.create({
   preview: { width: '100%', height: 200, borderRadius: 15, marginBottom: 20 },
   locationCard: { flexDirection: 'row', backgroundColor: '#E0E7FF', padding: 18, borderRadius: 15, alignItems: 'center', marginBottom: 120 },
   locationIcon: { fontSize: 20, marginRight: 12 },
-  autoDetected: { fontSize: 12, fontWeight: '600', color: '#1E40AF' },
-  locationText: { fontSize: 14, color: '#1E3A8A', fontWeight: '500' },
+  autoDetected: { fontSize: 12, fontWeight: '700', color: '#1E40AF' },
+  locationText: { fontSize: 14, color: '#1E3A8A', fontWeight: '500', marginTop: 2 },
+  coordsLabel: { fontSize: 11, color: '#1E40AF', opacity: 0.7, marginTop: 4 },
   submitBtn: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: '#1E3A8A', padding: 18, borderRadius: 20, alignItems: 'center' },
   submitText: { color: '#FFFFFF', fontWeight: '600' }
 });

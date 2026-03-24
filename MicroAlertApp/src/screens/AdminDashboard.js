@@ -12,7 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API from '../api/apiService';
 
-// 🚨 Derived from your centralized API config to ensure 10.0.2.2 is used for images
+// Derived from centralized API config to ensure 10.0.2.2 is used for images
 const SERVER_URL = API.defaults.baseURL.replace('/api', ''); 
 
 export default function AdminDashboard({ navigation }) {
@@ -142,7 +142,7 @@ export default function AdminDashboard({ navigation }) {
                   </View>
                 </View>
 
-                {/* Urgent Tag (Multiple Reports Check) */}
+                {/* Urgent Tag */}
                 {report.priority === "urgent" && (
                   <Text style={styles.urgentText}>
                     🚨 Multiple reports from same location
@@ -170,14 +170,25 @@ export default function AdminDashboard({ navigation }) {
                   {report.description}
                 </Text>
 
-                {/* Location Info */}
-                <Text style={styles.locationText}>
-                  📍 Lat: {report.latitude || "N/A"} | Long: {report.longitude || "N/A"}
-                </Text>
+                {/* 🚨 FIX: DISPLAYING THE ADDRESS NAME */}
+                <View style={styles.locationContainer}>
+                  <Text style={styles.locationLabel}>📍 Incident Location:</Text>
+                  
+                  {/* If address exists, show it. Otherwise, show coords as fallback */}
+                  <Text style={styles.locationText} numberOfLines={2}>
+                    {report.address ? report.address : `Lat: ${report.latitude}, Long: ${report.longitude}`}
+                  </Text>
+
+                  {/* Optional: Show small coordinates below the address for accuracy */}
+                  {report.address && (
+                    <Text style={styles.coordsSubText}>
+                       Coords: ({report.latitude.toFixed(4)}, {report.longitude.toFixed(4)})
+                    </Text>
+                  )}
+                </View>
 
                 {/* --- CONDITIONAL ACTION BUTTONS --- */}
 
-                {/* 1. Show Approve/Reject ONLY if Pending */}
                 {report.status === 'pending' && (
                   <View style={styles.actionRow}>
                     <TouchableOpacity
@@ -196,7 +207,6 @@ export default function AdminDashboard({ navigation }) {
                   </View>
                 )}
 
-                {/* 2. Show Delete ONLY if already Rejected */}
                 {report.status === 'rejected' && (
                   <TouchableOpacity 
                     style={styles.deleteBtn} 
@@ -239,13 +249,18 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: 'bold' },
   image: { width: '100%', height: 180, borderRadius: 10, marginBottom: 10 },
   videoPlaceholder: { width: '100%', height: 60, justifyContent: 'center', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 10, marginBottom: 10 },
-  detailText: { fontSize: 13, color: '#4B5563', marginBottom: 5 },
-  locationText: { fontSize: 13, color: '#1E3A8A', marginBottom: 10 },
+  detailText: { fontSize: 13, color: '#4B5563', marginBottom: 10 },
+  
+  // LOCATION SECTION STYLES
+  locationContainer: { marginBottom: 15, backgroundColor: '#F9FAFB', padding: 10, borderRadius: 10 },
+  locationLabel: { fontSize: 12, fontWeight: '700', color: '#1E3A8A', marginBottom: 4 },
+  locationText: { fontSize: 13, color: '#1E3A8A', lineHeight: 18 },
+  coordsSubText: { fontSize: 11, color: '#94A3B8', marginTop: 5 },
+
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
   approveBtn: { backgroundColor: '#16A34A', padding: 12, borderRadius: 10, width: '48%', alignItems: 'center' },
   rejectBtn: { backgroundColor: '#DC2626', padding: 12, borderRadius: 10, width: '48%', alignItems: 'center' },
   btnText: { color: '#FFFFFF', fontWeight: 'bold' },
-  // 🚨 STYLES FOR DELETE BUTTON
   deleteBtn: { backgroundColor: '#FFF1F1', borderWidth: 1, borderColor: '#DC2626', padding: 14, borderRadius: 12, marginTop: 5, alignItems: 'center' },
   deleteBtnText: { color: '#DC2626', fontWeight: 'bold', fontSize: 14 }
 });

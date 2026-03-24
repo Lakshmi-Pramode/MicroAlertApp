@@ -13,21 +13,30 @@ const ReportSchema = new mongoose.Schema({
         trim: true
     },
 
+    // 🚨 NEW FIELD: Stores the human-readable address (e.g., "Saintgits College, Kottayam")
+    address: {
+        type: String,
+        trim: true
+    },
+
     mediaUrl: {
         type: String
     },
 
     mediaType: {
         type: String,
-        enum: ['photo', 'video']
+        enum: ['photo', 'video'],
+        default: 'photo'
     },
 
     latitude: {
-        type: Number
+        type: Number,
+        required: true
     },
 
     longitude: {
-        type: Number
+        type: Number,
+        required: true
     },
 
     location: {
@@ -72,6 +81,7 @@ const ReportSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Create a geospatial index for proximity searches
 ReportSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Report', ReportSchema);
