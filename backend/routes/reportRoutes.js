@@ -29,13 +29,16 @@ const upload = multer({ storage: storage });
 router.post('/', verifyToken, upload.single('image'), async (req, res) => {
 
     try {
-
         const { disasterType, latitude, longitude } = req.body;
 
-        // Detect nearby reports
+        // 🚨 FIX 1: Convert the incoming strings from FormData into actual Numbers
+        const latNum = parseFloat(latitude);
+        const lngNum = parseFloat(longitude);
+
+        // 🚨 FIX 2: Use the Number variables for the math calculations
         const nearbyReports = await Report.find({
-            latitude: { $gte: latitude - 0.001, $lte: latitude + 0.001 },
-            longitude: { $gte: longitude - 0.001, $lte: longitude + 0.001 },
+            latitude: { $gte: latNum - 0.001, $lte: latNum + 0.001 },
+            longitude: { $gte: lngNum - 0.001, $lte: lngNum + 0.001 },
             status: "pending"
         });
 
@@ -50,11 +53,11 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
             description: `${disasterType} reported`,
             mediaUrl: req.file ? req.file.filename : null,
             mediaType: req.file?.mimetype.startsWith('video') ? 'video' : 'photo',
-            latitude,
-            longitude,
+            latitude: latNum,   // 🚨 FIX 3: Save as Number
+            longitude: lngNum,  // 🚨 FIX 3: Save as Number
             location: {
                 type: "Point",
-                coordinates: [longitude, latitude]
+                coordinates: [lngNum, latNum] // 🚨 FIX 4: GeoJSON requires Numbers
             },
             user: req.user.id,
             status: 'pending',

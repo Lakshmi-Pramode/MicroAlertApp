@@ -126,10 +126,10 @@ export default function ReportScreen({ navigation }) {
     formData.append('latitude', latitude.toString());
     formData.append('longitude', longitude.toString());
 
-    // ⚡ Important: field name must match backend multer
+    // ⚡ FIX: Added bulletproof fallbacks for both 'type' and 'name'
     formData.append('image', {
       uri: mediaFile.uri,
-      type: mediaFile.type,
+      type: mediaFile.type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
       name: mediaFile.fileName || (mediaType === 'video' ? 'video.mp4' : 'photo.jpg')
     });
 
