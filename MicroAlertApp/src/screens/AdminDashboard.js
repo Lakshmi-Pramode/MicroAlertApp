@@ -19,6 +19,9 @@ export default function AdminDashboard({ navigation }) {
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // State to track which report the AI is currently analyzing
+  const [analyzingId, setAnalyzingId] = useState(null); 
 
   // ================= FETCH ALL REPORTS =================
   const fetchReports = async () => {
@@ -37,15 +40,30 @@ export default function AdminDashboard({ navigation }) {
     fetchReports();
   }, []);
 
-  // ================= UPDATE STATUS (APPROVE/REJECT) =================
+  // ================= UPDATE STATUS (SMART APPROVE/REJECT) =================
   const updateStatus = async (id, status) => {
+    // Show loading spinner on the specific button if approving
+    if (status === 'approved') setAnalyzingId(id);
+
     try {
-      await API.put(`/reports/${id}`, { status });
-      Alert.alert("Success", `Report ${status}`);
+      const res = await API.put(`/reports/${id}`, { status });
+      
+      // Show the Admin what the AI decided!
+      if (status === 'approved') {
+         Alert.alert(
+             "AI Analysis Complete", 
+             `Result: ${res.data.message}\nRisk Score: ${res.data.report?.riskScore || 0}/10\nNotes: ${res.data.report?.aiNotes || 'N/A'}`
+         );
+      } else {
+         Alert.alert("Success", "Report manually rejected.");
+      }
+
       fetchReports(); // Refresh list to show status change
     } catch (error) {
       console.log("Update Error:", error.response?.data || error.message);
-      Alert.alert("Error", "Failed to update report");
+      Alert.alert("Error", error.response?.data?.message || "Failed to update report");
+    } finally {
+      setAnalyzingId(null);
     }
   };
 
@@ -99,9 +117,11 @@ export default function AdminDashboard({ navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1E3A8A" />
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color="#1E3A8A" />
+        </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
           {/* Statistics Cards */}
           <View style={styles.statsRow}>
@@ -170,7 +190,7 @@ export default function AdminDashboard({ navigation }) {
                   {report.description}
                 </Text>
 
-                {/* 🚨 FIX: DISPLAYING THE ADDRESS NAME */}
+                {/* DISPLAYING THE ADDRESS NAME */}
                 <View style={styles.locationContainer}>
                   <Text style={styles.locationLabel}>📍 Incident Location:</Text>
                   
@@ -187,6 +207,14 @@ export default function AdminDashboard({ navigation }) {
                   )}
                 </View>
 
+                {/* DISPLAY AI ANALYSIS IF AVAILABLE */}
+                {report.aiNotes ? (
+                    <View style={styles.aiBox}>
+                        <Text style={styles.aiTitle}>🤖 AI Analysis (Risk: {report.riskScore}/10)</Text>
+                        <Text style={styles.aiText}>{report.aiNotes}</Text>
+                    </View>
+                ) : null}
+
                 {/* --- CONDITIONAL ACTION BUTTONS --- */}
 
                 {report.status === 'pending' && (
@@ -194,20 +222,28 @@ export default function AdminDashboard({ navigation }) {
                     <TouchableOpacity
                       style={styles.approveBtn}
                       onPress={() => updateStatus(report._id, 'approved')}
+                      disabled={analyzingId === report._id}
                     >
-                      <Text style={styles.btnText}>Approve</Text>
+                      {/* Show Spinner if AI is thinking, otherwise show Text */}
+                      {analyzingId === report._id ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                          <Text style={styles.btnText}>AI Approve</Text>
+                      )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={styles.rejectBtn}
                       onPress={() => updateStatus(report._id, 'rejected')}
+                      disabled={analyzingId === report._id}
                     >
                       <Text style={styles.btnText}>Reject</Text>
                     </TouchableOpacity>
                   </View>
                 )}
 
-                {report.status === 'rejected' && (
+                {/* 🚨 FIX: Delete button now shows for BOTH Rejected AND Approved reports */}
+                {(report.status === 'rejected' || report.status === 'approved') && (
                   <TouchableOpacity 
                     style={styles.deleteBtn} 
                     onPress={() => deleteReport(report._id)}
@@ -257,9 +293,14 @@ const styles = StyleSheet.create({
   locationText: { fontSize: 13, color: '#1E3A8A', lineHeight: 18 },
   coordsSubText: { fontSize: 11, color: '#94A3B8', marginTop: 5 },
 
+  // AI STYLES
+  aiBox: { backgroundColor: '#F0FDF4', padding: 12, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#BBF7D0' },
+  aiTitle: { fontWeight: 'bold', color: '#166534', marginBottom: 4, fontSize: 13 },
+  aiText: { color: '#15803D', fontSize: 13, lineHeight: 18 },
+
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  approveBtn: { backgroundColor: '#16A34A', padding: 12, borderRadius: 10, width: '48%', alignItems: 'center' },
-  rejectBtn: { backgroundColor: '#DC2626', padding: 12, borderRadius: 10, width: '48%', alignItems: 'center' },
+  approveBtn: { backgroundColor: '#16A34A', padding: 12, borderRadius: 10, width: '48%', alignItems: 'center', justifyContent: 'center' },
+  rejectBtn: { backgroundColor: '#DC2626', padding: 12, borderRadius: 10, width: '48%', alignItems: 'center', justifyContent: 'center' },
   btnText: { color: '#FFFFFF', fontWeight: 'bold' },
   deleteBtn: { backgroundColor: '#FFF1F1', borderWidth: 1, borderColor: '#DC2626', padding: 14, borderRadius: 12, marginTop: 5, alignItems: 'center' },
   deleteBtnText: { color: '#DC2626', fontWeight: 'bold', fontSize: 14 }

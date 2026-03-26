@@ -13,7 +13,7 @@ const ReportSchema = new mongoose.Schema({
         trim: true
     },
 
-    // 🚨 NEW FIELD: Stores the human-readable address (e.g., "Saintgits College, Kottayam")
+    // Stores the human-readable address (e.g., "Saintgits College, Kottayam")
     address: {
         type: String,
         trim: true
@@ -56,11 +56,22 @@ const ReportSchema = new mongoose.Schema({
         default: 'pending'
     },
 
-    // ⭐ NEW FIELD (URGENT DETECTION)
+    // URGENT DETECTION
     priority: {
         type: String,
         enum: ['normal', 'urgent'],
         default: 'normal'
+    },
+
+    // 🚨 FIX: ADDED AI FIELDS HERE SO MONGOOSE DOES NOT DELETE THEM
+    riskScore: { 
+        type: Number, 
+        default: 0 
+    },
+    
+    aiNotes: { 
+        type: String, 
+        default: '' 
     },
 
     verifiedBy: {
