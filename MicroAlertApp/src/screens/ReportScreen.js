@@ -25,7 +25,7 @@ export default function ReportScreen({ navigation }) {
   const [address, setAddress] = useState(''); // 🚨 NEW: State for place name
   const [loadingLocation, setLoadingLocation] = useState(false); // 🚨 NEW: Loading state
 
-  const disasterTypes = ['Flood', 'Landslide', 'Fire', 'Other'];
+  const disasterTypes = ['Flood', 'Landslide', 'Other'];
 
   const requestCameraPermission = async () => {
     if (Platform.OS === 'android') {

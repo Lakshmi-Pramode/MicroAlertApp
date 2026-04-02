@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, PermissionsAndroid, Platform, ActivityIndicator } from 'react-native';
+import Geolocation from '@react-native-community/geolocation';
 import API from '../api/apiService';
 
 export default function RegisterScreen({ navigation }) {
@@ -8,8 +9,51 @@ export default function RegisterScreen({ navigation }) {
         email: '',
         password: '',
         confirmPassword: '',
-        location: 'Maple Avenue' // Default from your UI
+        location: 'Maple Avenue' // Initial default
     });
+
+    const [loadingLocation, setLoadingLocation] = useState(false);
+
+    // Fetch address name from coordinates using Nominatim
+    const fetchAddress = async (lat, lon) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+                { headers: { 'User-Agent': 'MicroAlertApp' } }
+            );
+            const data = await response.json();
+            const displayAddress = data.display_name || "Unknown Location";
+            setForm(prev => ({ ...prev, location: displayAddress }));
+        } catch (error) {
+            console.log("Geocoding Error:", error);
+            Alert.alert("Location Error", "Could not fetch address name.");
+        }
+    };
+
+    // Request permissions and get current position
+    const getLocation = async () => {
+        if (Platform.OS === 'android') {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+            );
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                return Alert.alert("Permission Denied", "Location access is required.");
+            }
+        }
+
+        setLoadingLocation(true);
+        Geolocation.getCurrentPosition(
+            position => {
+                const { latitude, longitude } = position.coords;
+                fetchAddress(latitude, longitude).then(() => setLoadingLocation(false));
+            },
+            error => {
+                setLoadingLocation(false);
+                Alert.alert("Location Error", "Make sure GPS is enabled.");
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+    };
 
     const handleRegister = async () => {
         if (form.password !== form.confirmPassword) {
@@ -45,10 +89,23 @@ export default function RegisterScreen({ navigation }) {
             <Text style={styles.label}>Confirm Password</Text>
             <TextInput style={styles.input} placeholder="........" secureTextEntry onChangeText={(v) => setForm({...form, confirmPassword: v})} />
 
-            <Text style={styles.label}>Location (Locality)</Text>
-            <View style={styles.pickerSubstitute}>
-                <Text>{form.location}</Text>
+            <View style={styles.locationHeader}>
+                <Text style={styles.label}>Location (Locality)</Text>
+                <TouchableOpacity onPress={getLocation} disabled={loadingLocation}>
+                    {loadingLocation ? (
+                        <ActivityIndicator size="small" color="#D32F2F" />
+                    ) : (
+                        <Text style={styles.searchLink}>Search Location 📍</Text>
+                    )}
+                </TouchableOpacity>
             </View>
+            
+            <TextInput 
+                style={styles.input} 
+                value={form.location} 
+                onChangeText={(v) => setForm({...form, location: v})}
+                placeholder="Locality Name"
+            />
 
             <TouchableOpacity style={styles.regBtn} onPress={handleRegister}>
                 <Text style={styles.regBtnText}>Register</Text>
@@ -63,8 +120,9 @@ const styles = StyleSheet.create({
     title: { fontSize: 32, fontWeight: 'bold', color: '#002B5B' },
     sub: { color: '#666', marginBottom: 30 },
     label: { fontWeight: 'bold', marginBottom: 5, color: '#333' },
-    input: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 10, marginBottom: 20, backgroundColor: '#eee',color: '#000' },
-    pickerSubstitute: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 10, marginBottom: 30, backgroundColor: '#FAFAFA' },
-    regBtn: { backgroundColor: '#D32F2F', padding: 18, borderRadius: 12, alignItems: 'center' },
+    locationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
+    searchLink: { color: '#D32F2F', fontWeight: '600', fontSize: 13 },
+    input: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 10, marginBottom: 20, backgroundColor: '#FAFAFA', color: '#000' },
+    regBtn: { backgroundColor: '#D32F2F', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 10 },
     regBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });
