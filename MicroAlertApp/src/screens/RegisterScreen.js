@@ -4,17 +4,31 @@ import Geolocation from '@react-native-community/geolocation';
 import API from '../api/apiService';
 
 export default function RegisterScreen({ navigation }) {
+
     const [form, setForm] = useState({
         fullName: '',
         email: '',
         password: '',
         confirmPassword: '',
-        location: 'Maple Avenue' // Initial default
+        location: 'Maple Avenue'
     });
 
     const [loadingLocation, setLoadingLocation] = useState(false);
 
-    // Fetch address name from coordinates using Nominatim
+    // ✅ ADDED: email error state
+    const [emailError, setEmailError] = useState('');
+
+    // ✅ ADDED: simple email validation (safe)
+    const validateEmail = (email) => {
+        if (!email.includes("@gmail.com")) {
+            setEmailError("Email must be a valid Gmail");
+            return false;
+        }
+        setEmailError('');
+        return true;
+    };
+
+    // Fetch address
     const fetchAddress = async (lat, lon) => {
         try {
             const response = await fetch(
@@ -30,7 +44,7 @@ export default function RegisterScreen({ navigation }) {
         }
     };
 
-    // Request permissions and get current position
+    // Get location
     const getLocation = async () => {
         if (Platform.OS === 'android') {
             const granted = await PermissionsAndroid.request(
@@ -56,9 +70,14 @@ export default function RegisterScreen({ navigation }) {
     };
 
     const handleRegister = async () => {
+
+        // ✅ ADDED: email validation check
+        if (!validateEmail(form.email)) return;
+
         if (form.password !== form.confirmPassword) {
             return Alert.alert("Error", "Passwords do not match");
         }
+
         try {
             await API.post('/auth/register', form);
             Alert.alert("Success", "Account created successfully!");
@@ -78,16 +97,44 @@ export default function RegisterScreen({ navigation }) {
             <Text style={styles.sub}>Create your hyperlocal account</Text>
 
             <Text style={styles.label}>Full Name</Text>
-            <TextInput style={styles.input} placeholder="John Doe" onChangeText={(v) => setForm({...form, fullName: v})} />
+            <TextInput 
+                style={styles.input} 
+                placeholder="John Doe" 
+                onChangeText={(v) => setForm({...form, fullName: v})} 
+            />
 
             <Text style={styles.label}>Email Address</Text>
-            <TextInput style={styles.input} placeholder="john@example.com" onChangeText={(v) => setForm({...form, email: v})} />
+            <TextInput 
+                style={styles.input} 
+                placeholder="john@example.com" 
+                onChangeText={(v) => {
+                    setForm({...form, email: v});
+                    validateEmail(v); // ✅ live check
+                }} 
+            />
+
+            {/* ✅ ADDED: error display */}
+            {emailError ? (
+                <Text style={{ color: 'red', marginBottom: 10 }}>
+                    {emailError}
+                </Text>
+            ) : null}
 
             <Text style={styles.label}>Password</Text>
-            <TextInput style={styles.input} placeholder="........" secureTextEntry onChangeText={(v) => setForm({...form, password: v})} />
+            <TextInput 
+                style={styles.input} 
+                placeholder="........" 
+                secureTextEntry 
+                onChangeText={(v) => setForm({...form, password: v})} 
+            />
 
             <Text style={styles.label}>Confirm Password</Text>
-            <TextInput style={styles.input} placeholder="........" secureTextEntry onChangeText={(v) => setForm({...form, confirmPassword: v})} />
+            <TextInput 
+                style={styles.input} 
+                placeholder="........" 
+                secureTextEntry 
+                onChangeText={(v) => setForm({...form, confirmPassword: v})} 
+            />
 
             <View style={styles.locationHeader}>
                 <Text style={styles.label}>Location (Locality)</Text>

@@ -11,8 +11,6 @@ export default function LoginScreen({ navigation }) {
         try {
             const res = await API.post('/auth/login', { email, password });
             
-            // 🚨 FIX: Save both the Token and the User's Full Name
-            // This allows the Home screen to greet the user by name.
             await AsyncStorage.setItem('token', res.data.token);
             
             if (res.data.user && res.data.user.fullName) {
@@ -52,8 +50,14 @@ export default function LoginScreen({ navigation }) {
                 <Text style={styles.btnText}>Login</Text>
             </TouchableOpacity>
             
+            {/* Admin Login */}
             <TouchableOpacity onPress={() => navigation.navigate('AdminLogin')}>
                 <Text style={styles.adminLink}>Admin Login</Text>
+            </TouchableOpacity>
+
+            {/* ✅ NEW: Agency Login */}
+            <TouchableOpacity onPress={() => navigation.navigate('AgencyLogin')}>
+                <Text style={styles.agencyLink}>Agency Login</Text>
             </TouchableOpacity>
             
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -73,5 +77,9 @@ const styles = StyleSheet.create({
     btn: { backgroundColor: '#D32F2F', padding: 15, borderRadius: 10, alignItems: 'center' },
     btnText: { color: '#fff', fontWeight: 'bold' },
     adminLink: { textAlign: 'center', marginTop: 20, color: '#002B5B' },
+
+    // ✅ NEW STYLE
+    agencyLink: { textAlign: 'center', marginTop: 10, color: '#1976D2', fontWeight: 'bold' },
+
     regLink: { textAlign: 'center', marginTop: 40, color: '#000' }
 });
