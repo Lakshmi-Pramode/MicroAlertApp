@@ -8,10 +8,14 @@ import {
     Alert,
     ScrollView,
     PermissionsAndroid,
-    Platform
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    ActivityIndicator
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import API from '../api/apiService';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function AgencyDashboard({ navigation }) {
 
@@ -22,15 +26,17 @@ export default function AgencyDashboard({ navigation }) {
 
     const [latitude, setLatitude] = useState(null);
     const [longitude, setLongitude] = useState(null);
+    
+    // Loading state just for the UI feedback while GPS fetches
+    const [isLocating, setIsLocating] = useState(false);
 
-    // ✅ Ask permission (IMPORTANT for CLI Android)
+    // ================= PERMISSIONS & LOCATION =================
     const requestLocationPermission = async () => {
         if (Platform.OS === 'android') {
             try {
                 const granted = await PermissionsAndroid.request(
                     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
                 );
-
                 return granted === PermissionsAndroid.RESULTS.GRANTED;
             } catch (err) {
                 console.log(err);
@@ -40,9 +46,7 @@ export default function AgencyDashboard({ navigation }) {
         return true;
     };
 
-    // 📍 Get Location
     const getLocation = async () => {
-
         const hasPermission = await requestLocationPermission();
 
         if (!hasPermission) {
@@ -50,6 +54,7 @@ export default function AgencyDashboard({ navigation }) {
             return;
         }
 
+        setIsLocating(true);
         Geolocation.getCurrentPosition(
             position => {
                 const lat = position.coords.latitude;
@@ -58,12 +63,13 @@ export default function AgencyDashboard({ navigation }) {
                 setLatitude(lat);
                 setLongitude(lng);
 
-                // Better readable location
                 setLocation(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+                setIsLocating(false);
             },
             error => {
                 Alert.alert("Error", "Unable to fetch location");
                 console.log(error);
+                setIsLocating(false);
             },
             {
                 enableHighAccuracy: true,
@@ -73,10 +79,8 @@ export default function AgencyDashboard({ navigation }) {
         );
     };
 
-    // 📌 Add Resource
+    // ================= API SUBMISSION =================
     const handleAddResource = async () => {
-
-        // ✅ Phone validation
         if (!/^[0-9]{10}$/.test(contact)) {
             Alert.alert("Error", "Enter valid 10-digit phone number");
             return;
@@ -99,7 +103,7 @@ export default function AgencyDashboard({ navigation }) {
 
             Alert.alert("Success", "Resource Added Successfully");
 
-            // Reset fields
+            // Reset Form
             setTitle('');
             setType('');
             setContact('');
@@ -114,114 +118,268 @@ export default function AgencyDashboard({ navigation }) {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.header}>Agency Dashboard</Text>
+        <LinearGradient colors={['#0F172A', '#1E1B4B']} style={styles.safeArea}>
+            <SafeAreaView style={{ flex: 1 }}>
+                <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
 
-            <Text style={styles.subHeader}>Add Resource</Text>
+                <ScrollView 
+                    showsVerticalScrollIndicator={false} 
+                    contentContainerStyle={styles.container}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* Header Section */}
+                    <View style={styles.header}>
+                        <View>
+                            <Text style={styles.welcomeText}>Agency Portal</Text>
+                            <Text style={styles.title}>Dashboard</Text>
+                        </View>
+                        <TouchableOpacity style={styles.glassLogoutBtn} onPress={() => navigation.replace("Login")} activeOpacity={0.7}>
+                            <Text style={styles.logoutText}>Logout</Text>
+                        </TouchableOpacity>
+                    </View>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Resource Title"
-                value={title}
-                onChangeText={setTitle}
-            />
+                    {/* Add Resource Card */}
+                    <View style={styles.glassCard}>
+                        <View style={styles.cardHeader}>
+                            <View style={styles.iconBox}>
+                                <Text style={styles.iconText}>📦</Text>
+                            </View>
+                            <Text style={styles.subHeader}>Deploy Resource</Text>
+                        </View>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Type (shelter / food / medical)"
-                value={type}
-                onChangeText={setType}
-            />
+                        <Text style={styles.label}>Resource Title</Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Downtown Relief Tent"
+                                placeholderTextColor="#64748B"
+                                value={title}
+                                onChangeText={setTitle}
+                            />
+                        </View>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Contact Number"
-                value={contact}
-                onChangeText={setContact}
-                keyboardType="numeric"
-            />
+                        <Text style={styles.label}>Category</Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="shelter / food / medical"
+                                placeholderTextColor="#64748B"
+                                value={type}
+                                onChangeText={setType}
+                            />
+                        </View>
 
-            {/* 📍 Location Button */}
-            <TouchableOpacity style={styles.locBtn} onPress={getLocation}>
-                <Text style={styles.btnText}>Get Location</Text>
-            </TouchableOpacity>
+                        <Text style={styles.label}>Contact Number</Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="10-digit emergency line"
+                                placeholderTextColor="#64748B"
+                                value={contact}
+                                onChangeText={setContact}
+                                keyboardType="numeric"
+                                maxLength={10}
+                            />
+                        </View>
 
-            {/* Show location */}
-            {location ? (
-                <Text style={styles.locationText}>{location}</Text>
-            ) : null}
+                        <Text style={styles.label}>Deployment Location</Text>
+                        <View style={styles.locationRow}>
+                            <TouchableOpacity 
+                                style={styles.locBtn} 
+                                onPress={getLocation} 
+                                disabled={isLocating}
+                                activeOpacity={0.7}
+                            >
+                                {isLocating ? (
+                                    <ActivityIndicator size="small" color="#38BDF8" />
+                                ) : (
+                                    <Text style={styles.locBtnText}>📍 Detect GPS</Text>
+                                )}
+                            </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btn} onPress={handleAddResource}>
-                <Text style={styles.btnText}>Add Resource</Text>
-            </TouchableOpacity>
+                            <View style={styles.locationDisplay}>
+                                <Text style={[styles.locationText, !location && { color: '#64748B' }]} numberOfLines={2}>
+                                    {location ? location : "Awaiting coordinates..."}
+                                </Text>
+                            </View>
+                        </View>
 
-            {/* View All Resources */}
-            <TouchableOpacity onPress={() => navigation.navigate("AllResources")}>
-                <Text style={styles.link}>View All Resources</Text>
-            </TouchableOpacity>
+                        {/* Submit Button */}
+                        <TouchableOpacity onPress={handleAddResource} activeOpacity={0.8} style={styles.btnShadow}>
+                            <LinearGradient 
+                                colors={['#38BDF8', '#0284C7']} 
+                                start={{ x: 0, y: 0 }} 
+                                end={{ x: 1, y: 0 }}
+                                style={styles.submitBtn}
+                            >
+                                <Text style={styles.submitBtnText}>Add Resource</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
 
-            {/* Logout */}
-            <TouchableOpacity onPress={() => navigation.replace("Login")}>
-                <Text style={styles.logout}>Logout</Text>
-            </TouchableOpacity>
-        </ScrollView>
+                    {/* View All Resources Button */}
+                    <TouchableOpacity 
+                        style={styles.viewAllBtn} 
+                        onPress={() => navigation.navigate("AllResources")}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.viewAllIcon}>🗂️</Text>
+                        <Text style={styles.viewAllText}>View Deployed Resources</Text>
+                    </TouchableOpacity>
+
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
+// ================= STYLES =================
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: '#fff'
+    safeArea: { flex: 1 },
+    container: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
+
+    // Header
+    header: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginTop: 20, 
+        marginBottom: 30 
     },
-    header: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        color: '#D32F2F'
-    },
-    subHeader: {
-        fontSize: 18,
-        marginBottom: 15,
-        fontWeight: '600'
-    },
-    input: {
+    welcomeText: { fontSize: 13, color: '#38BDF8', fontWeight: '700', letterSpacing: 1 },
+    title: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
+    glassLogoutBtn: { 
+        backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+        paddingHorizontal: 16, 
+        paddingVertical: 10, 
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#ccc',
-        padding: 12,
-        marginBottom: 15,
-        borderRadius: 10
+        borderColor: 'rgba(239, 68, 68, 0.3)'
     },
-    btn: {
-        backgroundColor: '#D32F2F',
-        padding: 15,
-        borderRadius: 10,
-        marginTop: 10
+    logoutText: { color: '#FCA5A5', fontWeight: '700', fontSize: 13 },
+
+    // Glass Card
+    glassCard: { 
+        backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+        padding: 24, 
+        borderRadius: 24, 
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)'
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 25
+    },
+    iconBox: {
+        width: 44, height: 44,
+        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12
+    },
+    iconText: { fontSize: 22 },
+    subHeader: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
+
+    // Form Fields
+    label: { 
+        fontSize: 14, 
+        fontWeight: '700', 
+        color: '#CBD5E1', 
+        marginBottom: 8, 
+        marginLeft: 4,
+        letterSpacing: 0.5 
+    },
+    inputContainer: { 
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 16, 
+        borderWidth: 1, 
+        borderColor: 'rgba(255, 255, 255, 0.1)', 
+        marginBottom: 20, 
+        paddingHorizontal: 16, 
+        height: 56, 
+        justifyContent: 'center' 
+    },
+    input: { 
+        flex: 1, 
+        fontSize: 15, 
+        color: '#FFFFFF', 
+        fontWeight: '500' 
+    },
+
+    // Location Section
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 30
     },
     locBtn: {
-        backgroundColor: '#1976D2',
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 10
+        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(56, 189, 248, 0.3)',
+        paddingHorizontal: 16,
+        height: 50,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12
     },
-    btnText: {
-        color: '#fff',
-        textAlign: 'center',
-        fontWeight: 'bold'
+    locBtnText: {
+        color: '#38BDF8',
+        fontWeight: '700',
+        fontSize: 14
+    },
+    locationDisplay: {
+        flex: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        height: 50,
+        borderRadius: 14,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)'
     },
     locationText: {
-        marginBottom: 10,
-        color: '#333'
+        color: '#34D399', 
+        fontSize: 12,
+        fontWeight: '600'
     },
-    link: {
-        marginTop: 15,
-        color: 'blue',
-        textAlign: 'center'
+
+    // Submit Button
+    btnShadow: { 
+        shadowColor: '#38BDF8', 
+        shadowOffset: { width: 0, height: 6 }, 
+        shadowOpacity: 0.4, 
+        shadowRadius: 12, 
+        elevation: 8 
     },
-    logout: {
-        marginTop: 20,
-        color: 'red',
-        textAlign: 'center',
-        fontWeight: 'bold'
-    }
+    submitBtn: { 
+        height: 60, 
+        borderRadius: 16, 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+    },
+    submitBtnText: { 
+        color: '#FFFFFF', 
+        fontSize: 17, 
+        fontWeight: '800', 
+        letterSpacing: 0.5 
+    },
+
+    // Secondary Action Button
+    viewAllBtn: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20
+    },
+    viewAllIcon: { fontSize: 20, marginRight: 10 },
+    viewAllText: { color: '#E2E8F0', fontSize: 16, fontWeight: '700' }
 });

@@ -9,11 +9,14 @@ import {
   Image,
   PermissionsAndroid,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
 import API from '../api/apiService';
+import LinearGradient from 'react-native-linear-gradient'; // Correct import for non-Expo
 
 export default function ReportScreen({ navigation }) {
 
@@ -22,8 +25,8 @@ export default function ReportScreen({ navigation }) {
   const [mediaType, setMediaType] = useState(null);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
-  const [address, setAddress] = useState(''); // 🚨 NEW: State for place name
-  const [loadingLocation, setLoadingLocation] = useState(false); // 🚨 NEW: Loading state
+  const [address, setAddress] = useState(''); 
+  const [loadingLocation, setLoadingLocation] = useState(false); 
 
   const disasterTypes = ['Flood', 'Landslide', 'Other'];
 
@@ -42,7 +45,6 @@ export default function ReportScreen({ navigation }) {
     return true;
   };
 
-  // 🚨 NEW: Reverse Geocoding Function
   const fetchAddress = async (lat, lon) => {
     try {
       const response = await fetch(
@@ -50,7 +52,6 @@ export default function ReportScreen({ navigation }) {
         { headers: { 'User-Agent': 'MicroAlertApp' } }
       );
       const data = await response.json();
-      // display_name gives the full address string
       const displayAddress = data.display_name || "Location Name Not Found";
       setAddress(displayAddress);
     } catch (error) {
@@ -59,17 +60,16 @@ export default function ReportScreen({ navigation }) {
     }
   };
 
-  // Capture Photo
- const capturePhoto = async () => {
+  const capturePhoto = async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) return;
 
     launchCamera(
       { 
         mediaType: 'photo', 
-        quality: 0.4,       // 🚨 Lower quality (0.4 instead of 0.8)
-        maxWidth: 1000,     // 🚨 Limit width
-        maxHeight: 1000,    // 🚨 Limit height
+        quality: 0.4,       
+        maxWidth: 1000,     
+        maxHeight: 1000,    
         saveToPhotos: false 
       },
       response => {
@@ -82,7 +82,6 @@ export default function ReportScreen({ navigation }) {
     );
   };
 
-  // Capture Video
   const captureVideo = async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
@@ -108,8 +107,7 @@ export default function ReportScreen({ navigation }) {
     );
   };
 
-  // Get Live Location
-const getLocation = () => {
+  const getLocation = () => {
     setLoadingLocation(true);
     
     const options = { 
@@ -126,7 +124,6 @@ const getLocation = () => {
         fetchAddress(lat, lon).then(() => setLoadingLocation(false));
       },
       error => {
-        // 🚨 FALLBACK: If High Accuracy fails, try "Normal" accuracy
         if (error.code === 3 || error.code === 2) { 
             Geolocation.getCurrentPosition(
                 position => {
@@ -150,7 +147,6 @@ const getLocation = () => {
     );
   };
 
-  // Submit Report
   const submitReport = async () => {
     if (!selectedType) {
       Alert.alert("Please select disaster type");
@@ -171,9 +167,8 @@ const getLocation = () => {
     formData.append('disasterType', selectedType);
     formData.append('latitude', latitude.toString());
     formData.append('longitude', longitude.toString());
-    formData.append('address', address); // 🚨 NEW: Appending the place name
+    formData.append('address', address); 
 
-    // ⚡ Bulletproof FormData attachment
     formData.append('image', {
       uri: mediaFile.uri,
       type: mediaFile.type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
@@ -187,7 +182,6 @@ const getLocation = () => {
 
       Alert.alert("Success", "Report submitted successfully");
 
-      // Reset form
       setSelectedType('');
       setMediaFile(null);
       setMediaType(null);
@@ -204,112 +198,272 @@ const getLocation = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.back}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Report Disaster</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        <Text style={styles.sectionTitle}>Disaster Type</Text>
-        <View style={styles.typeGrid}>
-          {disasterTypes.map(type => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.typeButton, selectedType === type && styles.typeSelected]}
-              onPress={() => setSelectedType(type)}
-            >
-              <Text style={[styles.typeText, selectedType === type && styles.typeTextSelected]}>
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.mediaRow}>
-          <TouchableOpacity style={styles.mediaCard} onPress={capturePhoto}>
-            <Text style={styles.mediaIcon}>📷</Text>
-            <Text style={styles.mediaTitle}>Capture Live Photo</Text>
-            <Text style={styles.mediaSub}>Real-time Evidence</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.mediaCard} onPress={captureVideo}>
-            <Text style={styles.mediaIcon}>🎥</Text>
-            <Text style={styles.mediaTitle}>Record Live Video</Text>
-            <Text style={styles.mediaSub}>Motion Evidence</Text>
-          </TouchableOpacity>
-        </View>
-
-        {mediaFile && mediaType === 'photo' && (
-          <Image source={{ uri: mediaFile.uri }} style={styles.preview} />
-        )}
-        {mediaFile && mediaType === 'video' && (
-          <Text style={{ marginBottom: 20, color: '#111827' }}>🎥 Video Ready to Upload</Text>
-        )}
-
-        <Text style={styles.sectionTitle}>Live Location</Text>
-        <TouchableOpacity 
-            style={styles.locationCard} 
-            onPress={getLocation}
-            disabled={loadingLocation}
+    <LinearGradient colors={['#0F172A', '#1E1B4B']} style={styles.safeArea}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+        
+        <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
         >
-          <Text style={styles.locationIcon}>📍</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.autoDetected}>
-                {loadingLocation ? "DETECTING..." : "AUTO-DETECTED"}
-            </Text>
-            
-            {loadingLocation ? (
-                <ActivityIndicator size="small" color="#1E3A8A" style={{ alignSelf: 'flex-start', marginTop: 5 }} />
-            ) : (
-                <Text style={styles.locationText} numberOfLines={2}>
-                    {address ? address : (latitude ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : "Tap to Detect Location")}
-                </Text>
-            )}
 
-            {address && latitude && (
-                <Text style={styles.coordsLabel}>
-                    Coordinates: {latitude.toFixed(4)}, {longitude.toFixed(4)}
-                </Text>
-            )}
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.glassBackBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+              <Text style={styles.back}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Report Disaster</Text>
+            <View style={{ width: 44 }} /> {/* Spacer for centering */}
           </View>
-        </TouchableOpacity>
 
-      </ScrollView>
+          {/* Disaster Type Section */}
+          <Text style={styles.sectionTitle}>Disaster Type</Text>
+          <View style={styles.typeGrid}>
+            {disasterTypes.map(type => {
+              const isSelected = selectedType === type;
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={styles.typeButtonWrapper}
+                  onPress={() => setSelectedType(type)}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={isSelected ? ['#38BDF8', '#3B82F6'] : ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+                    style={[styles.typeButton, isSelected && styles.typeButtonSelected]}
+                  >
+                    <Text style={[styles.typeText, isSelected && styles.typeTextSelected]}>
+                      {type}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-      <TouchableOpacity style={styles.submitBtn} onPress={submitReport}>
-        <Text style={styles.submitText}>Submit Report</Text>
-      </TouchableOpacity>
-    </View>
+          {/* Media Capture Section */}
+          <Text style={styles.sectionTitle}>Evidence (Photo or Video)</Text>
+          <View style={styles.mediaRow}>
+            <TouchableOpacity style={styles.mediaCard} onPress={capturePhoto} activeOpacity={0.6}>
+              <View style={styles.iconCircle}>
+                <Text style={styles.mediaIcon}>📷</Text>
+              </View>
+              <Text style={styles.mediaTitle}>Live Photo</Text>
+              <Text style={styles.mediaSub}>Real-time Evidence</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.mediaCard} onPress={captureVideo} activeOpacity={0.6}>
+              <View style={styles.iconCircle}>
+                <Text style={styles.mediaIcon}>🎥</Text>
+              </View>
+              <Text style={styles.mediaTitle}>Live Video</Text>
+              <Text style={styles.mediaSub}>Motion Evidence</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Media Preview */}
+          {mediaFile && mediaType === 'photo' && (
+            <View style={styles.previewContainer}>
+                <Image source={{ uri: mediaFile.uri }} style={styles.preview} />
+                <Text style={styles.previewTag}>📸 Photo Attached</Text>
+            </View>
+          )}
+          {mediaFile && mediaType === 'video' && (
+            <View style={styles.videoReadyBadge}>
+                <Text style={styles.videoReadyText}>🎥 Video Ready to Upload</Text>
+            </View>
+          )}
+
+          {/* Location Section */}
+          <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Live Location</Text>
+          <TouchableOpacity 
+              style={styles.locationCard} 
+              onPress={getLocation}
+              disabled={loadingLocation}
+              activeOpacity={0.7}
+          >
+            <View style={styles.locationIconBox}>
+                <Text style={styles.locationEmoji}>📍</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.autoDetected}>
+                  {loadingLocation ? "DETECTING COORDINATES..." : "AUTO-DETECTED"}
+              </Text>
+              
+              {loadingLocation ? (
+                  <ActivityIndicator size="small" color="#38BDF8" style={{ alignSelf: 'flex-start', marginTop: 5 }} />
+              ) : (
+                  <Text style={styles.locationText} numberOfLines={2}>
+                      {address ? address : (latitude ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : "Tap to Detect Location")}
+                  </Text>
+              )}
+
+              {address && latitude && (
+                  <Text style={styles.coordsLabel}>
+                      Lat: {latitude.toFixed(4)} | Lon: {longitude.toFixed(4)}
+                  </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+
+        </ScrollView>
+
+        {/* Floating Submit Button */}
+        <View style={styles.bottomContainer}>
+            <TouchableOpacity onPress={submitReport} activeOpacity={0.8} style={styles.btnShadow}>
+                <LinearGradient 
+                    colors={['#FF416C', '#FF4B2B']} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 0 }}
+                    style={styles.submitBtn}
+                >
+                    <Text style={styles.submitText}>Submit Report</Text>
+                </LinearGradient>
+            </TouchableOpacity>
+        </View>
+
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
+// ================= STYLES =================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB', paddingHorizontal: 20, paddingTop: 50 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30 },
-  back: { fontSize: 22, color: '#111827' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 15, color: '#374151' },
+  safeArea: { flex: 1 },
+  scrollContent: { 
+      paddingHorizontal: 24, 
+      paddingTop: 20, 
+      paddingBottom: 120 // Extra space so scroll doesn't get hidden behind floating button
+  },
+
+  // Header
+  header: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      justifyContent: 'space-between', 
+      marginBottom: 35 
+  },
+  glassBackBtn: { 
+      width: 44, height: 44, 
+      backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+      borderRadius: 22, justifyContent: 'center', alignItems: 'center', 
+      borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)', 
+  },
+  back: { fontSize: 22, color: '#FFFFFF', marginTop: -2 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
+  
+  sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 15, color: '#CBD5E1', letterSpacing: 0.5 },
+
+  // Disaster Types
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 30 },
-  typeButton: { width: '48%', paddingVertical: 18, borderRadius: 15, backgroundColor: '#F3F4F6', alignItems: 'center', marginBottom: 15 },
-  typeSelected: { backgroundColor: '#1E3A8A' },
-  typeText: { fontSize: 15, fontWeight: '500', color: '#374151' },
-  typeTextSelected: { color: '#FFFFFF' },
-  mediaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-  mediaCard: { width: '48%', borderWidth: 1.5, borderColor: '#D1D5DB', borderStyle: 'dashed', borderRadius: 18, paddingVertical: 30, alignItems: 'center', backgroundColor: '#FFFFFF' },
-  mediaIcon: { fontSize: 28, marginBottom: 10 },
-  mediaTitle: { fontWeight: '600', textAlign: 'center', marginBottom: 5, color: '#111827' },
-  mediaSub: { fontSize: 12, color: '#6B7280' },
-  preview: { width: '100%', height: 200, borderRadius: 15, marginBottom: 20 },
-  locationCard: { flexDirection: 'row', backgroundColor: '#E0E7FF', padding: 18, borderRadius: 15, alignItems: 'center', marginBottom: 120 },
-  locationIcon: { fontSize: 20, marginRight: 12 },
-  autoDetected: { fontSize: 12, fontWeight: '700', color: '#1E40AF' },
-  locationText: { fontSize: 14, color: '#1E3A8A', fontWeight: '500', marginTop: 2 },
-  coordsLabel: { fontSize: 11, color: '#1E40AF', opacity: 0.7, marginTop: 4 },
-  submitBtn: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: '#1E3A8A', padding: 18, borderRadius: 20, alignItems: 'center' },
-  submitText: { color: '#FFFFFF', fontWeight: '600' }
+  typeButtonWrapper: { width: '48%', marginBottom: 15 },
+  typeButton: { 
+      paddingVertical: 18, 
+      borderRadius: 16, 
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)'
+  },
+  typeButtonSelected: {
+      borderColor: '#38BDF8',
+      shadowColor: '#38BDF8',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4
+  },
+  typeText: { fontSize: 15, fontWeight: '600', color: '#94A3B8' },
+  typeTextSelected: { color: '#FFFFFF', fontWeight: '800' },
+
+  // Media Capture
+  mediaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  mediaCard: { 
+      width: '48%', 
+      borderWidth: 1.5, 
+      borderColor: 'rgba(255, 255, 255, 0.2)', 
+      borderStyle: 'dashed', 
+      borderRadius: 20, 
+      paddingVertical: 24, 
+      alignItems: 'center', 
+      backgroundColor: 'rgba(255, 255, 255, 0.03)' 
+  },
+  iconCircle: {
+      width: 50, height: 50,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12
+  },
+  mediaIcon: { fontSize: 24 },
+  mediaTitle: { fontWeight: '700', textAlign: 'center', marginBottom: 4, color: '#FFFFFF', fontSize: 15 },
+  mediaSub: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+
+  // Previews
+  previewContainer: { marginBottom: 25, position: 'relative' },
+  preview: { width: '100%', height: 220, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  previewTag: { 
+      position: 'absolute', top: 15, left: 15, 
+      backgroundColor: 'rgba(0,0,0,0.7)', color: '#FFF', 
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, 
+      fontSize: 12, fontWeight: '700', overflow: 'hidden'
+  },
+  videoReadyBadge: {
+      backgroundColor: 'rgba(34, 197, 94, 0.2)',
+      borderWidth: 1,
+      borderColor: 'rgba(34, 197, 94, 0.4)',
+      padding: 16,
+      borderRadius: 16,
+      marginBottom: 25,
+      alignItems: 'center'
+  },
+  videoReadyText: { color: '#86EFAC', fontWeight: '700', fontSize: 14 },
+
+  // Location
+  locationCard: { 
+      flexDirection: 'row', 
+      backgroundColor: 'rgba(56, 189, 248, 0.1)', // Subtle cyan tint
+      padding: 20, 
+      borderRadius: 20, 
+      alignItems: 'center', 
+      borderWidth: 1,
+      borderColor: 'rgba(56, 189, 248, 0.2)',
+  },
+  locationIconBox: {
+      width: 46, height: 46,
+      backgroundColor: 'rgba(56, 189, 248, 0.2)',
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 16
+  },
+  locationEmoji: { fontSize: 22 },
+  autoDetected: { fontSize: 11, fontWeight: '800', color: '#38BDF8', letterSpacing: 0.5 },
+  locationText: { fontSize: 15, color: '#FFFFFF', fontWeight: '600', marginTop: 4, lineHeight: 22 },
+  coordsLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '500', marginTop: 6 },
+
+  // Submit Button (Floating)
+  bottomContainer: {
+      position: 'absolute',
+      bottom: 0, left: 0, right: 0,
+      paddingHorizontal: 24,
+      paddingVertical: 20,
+      backgroundColor: '#0F172A', // Match background to hide scrolling content underneath
+      borderTopWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)'
+  },
+  btnShadow: { 
+      shadowColor: '#FF416C', 
+      shadowOffset: { width: 0, height: 6 }, 
+      shadowOpacity: 0.4, 
+      shadowRadius: 12, 
+      elevation: 8 
+  },
+  submitBtn: { 
+      paddingVertical: 20, 
+      borderRadius: 18, 
+      alignItems: 'center',
+      justifyContent: 'center'
+  },
+  submitText: { color: '#FFFFFF', fontWeight: '800', fontSize: 18, letterSpacing: 0.5 }
 });
