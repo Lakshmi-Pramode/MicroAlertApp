@@ -2,17 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Resource = require('../models/Resource');
 
-// ✅ Add resource (NO CHANGE)
+// ✅ 1. ADD RESOURCE (POST)
 router.post('/', async (req, res) => {
   try {
     const { title, type, contact, location, latitude, longitude } = req.body;
 
     if (!title || !type || !contact || !location) {
       return res.status(400).json({ error: "All fields required" });
-    }
-
-    if (!/^[0-9]{10}$/.test(contact)) {
-      return res.status(400).json({ error: "Invalid phone number" });
     }
 
     const resource = new Resource({
@@ -27,20 +23,19 @@ router.post('/', async (req, res) => {
     });
 
     await resource.save();
-    res.json(resource);
-
+    res.status(201).json(resource);
   } catch (err) {
+    console.error("POST Error:", err);
     res.status(500).json({ error: "Failed to add resource" });
   }
 });
 
-
-// ✅ UPDATED GET (IMPORTANT CHANGE ONLY HERE)
+// ✅ 2. GET ALL RESOURCES (GET)
 router.get('/', async (req, res) => {
   try {
     const resources = await Resource.find().sort({ createdAt: -1 });
 
-    // 🔥 ADD latitude & longitude at top level (NO BREAKING CHANGE)
+    // Formatting to ensure latitude/longitude are accessible at top level if needed
     const formatted = resources.map(r => ({
       ...r._doc,
       latitude: r.coordinates?.latitude,
@@ -48,14 +43,32 @@ router.get('/', async (req, res) => {
     }));
 
     res.json(formatted);
-
   } catch (err) {
     res.status(500).json({ error: "Error fetching resources" });
   }
 });
 
+// ✅ 3. DELETE RESOURCE (DELETE)
+// This matches the API.delete(`/resources/${id}`) call from your frontend
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
 
-// ✅ Nearby (no change)
+    // Use Mongoose to find and remove by the internal _id
+    const deletedResource = await Resource.findByIdAndDelete(id);
+
+    if (!deletedResource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    res.status(200).json({ message: "Resource deleted successfully", id });
+  } catch (err) {
+    console.error("DELETE Error:", err);
+    res.status(500).json({ error: "Server error during deletion" });
+  }
+});
+
+// ✅ 4. GET NEARBY (STUB)
 router.get('/nearby', async (req, res) => {
   try {
     const resources = await Resource.find();
